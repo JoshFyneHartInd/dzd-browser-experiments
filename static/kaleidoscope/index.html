@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kaleidoscope</title>
+<style>
+  :root{
+    --bg: #0b0a10;
+    --panel: #15131c;
+    --panel-line: #2a2635;
+    --ink: #ece7f5;
+    --ink-dim: #8d86a3;
+    --accent: #b98cff;
+    --accent-dim: #6f5599;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family: 'Courier New', ui-monospace, monospace;
+    overflow:hidden;
+  }
+  #app{
+    display:flex; height:100vh; width:100vw;
+  }
+  #stage{
+    flex:1; position:relative; display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 50% 45%, #171420 0%, #0b0a10 70%);
+  }
+  canvas#gl{
+    width:min(84vh,84vw); height:min(84vh,84vw);
+    display:block; cursor: grab;
+    filter: drop-shadow(0 0 60px rgba(185,140,255,0.10));
+  }
+  canvas#gl:active{ cursor: grabbing; }
+
+  #panel{
+    width:280px; min-width:280px; background:var(--panel);
+    border-left:1px solid var(--panel-line);
+    padding:22px 20px; display:flex; flex-direction:column; gap:22px;
+    overflow-y:auto;
+  }
+  h1{
+    font-family: Georgia, 'Times New Roman', serif; font-style:italic;
+    font-weight:400; font-size:22px; letter-spacing:0.5px; margin:0 0 2px 0; color:var(--ink);
+  }
+  .sub{ font-size:10.5px; color:var(--ink-dim); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px;}
+  section{ display:flex; flex-direction:column; gap:10px; }
+  label.field{
+    font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-dim);
+    display:flex; justify-content:space-between; align-items:baseline;
+  }
+  label.field span.val{ color:var(--accent); font-size:11px; }
+
+  input[type=range]{
+    -webkit-appearance:none; width:100%; height:2px; background:var(--panel-line);
+    outline:none; margin:6px 0 2px 0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:12px; height:12px; border-radius:50%;
+    background:var(--accent); cursor:pointer; border:2px solid var(--panel);
+    box-shadow:0 0 6px rgba(185,140,255,0.6);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:12px; height:12px; border-radius:50%; background:var(--accent);
+    cursor:pointer; border:2px solid var(--panel);
+  }
+
+  #swatches{ display:flex; gap:8px; }
+  .thumb{
+    width:52px; height:52px; border-radius:6px; cursor:pointer;
+    border:2px solid transparent; overflow:hidden; position:relative;
+    transition: border-color .15s, transform .15s;
+  }
+  .thumb canvas{ width:100%; height:100%; display:block; }
+  .thumb:hover{ transform: translateY(-2px); }
+  .thumb.active{ border-color:var(--accent); }
+
+  #upload-thumb{
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:var(--ink-dim); background:#0f0d15; border:2px dashed var(--panel-line);
+  }
+  #upload-thumb:hover{ color:var(--accent); border-color:var(--accent-dim); }
+
+  input[type=color]{
+    -webkit-appearance:none; width:100%; height:32px; border:1px solid var(--panel-line);
+    border-radius:6px; background:none; cursor:pointer; padding:0;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper{ padding:2px; }
+  input[type=color]::-webkit-color-swatch{ border:none; border-radius:4px; }
+
+  .hint{ font-size:10.5px; color:var(--ink-dim); line-height:1.5; }
+  .divider{ height:1px; background:var(--panel-line); margin:2px 0; }
+  #resetBtn, #reshuffleBtn{
+    background:none; border:1px solid var(--panel-line); color:var(--ink-dim);
+    font-family:inherit; font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
+    padding:9px; border-radius:6px; cursor:pointer; transition: all .15s;
+  }
+  #resetBtn:hover, #reshuffleBtn:hover{ border-color:var(--accent); color:var(--accent); }
+
+  #fileInput{ display:none; }
+
+  @media (max-width: 720px){
+    #app{ flex-direction:column-reverse; }
+    #panel{ width:100%; min-width:0; border-left:none; border-top:1px solid var(--panel-line); max-height:46vh; }
+    canvas#gl{ width:92vw; height:92vw; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="gl"></canvas>
+  </div>
+  <div id="panel">
+    <div>
+      <div class="sub">shader toy</div>
+      <h1>Kaleidoscope</h1>
+    </div>
+
+    <section>
+      <label class="field">Source image</label>
+      <div id="swatches"></div>
+      <input type="file" id="fileInput" accept="image/*">
+    </section>
+
+    <div class="divider"></div>
+
+    <section>
+      <label class="field">Rotation <span class="val" id="rotVal">0°</span></label>
+      <input type="range" id="rot" min="0" max="360" step="1" value="0">
+    </section>
+
+    <section>
+      <label class="field">Spin speed <span class="val" id="spinVal">0.0</span></label>
+      <input type="range" id="spin" min="-2" max="2" step="0.05" value="0">
+    </section>
+
+    <div class="divider"></div>
+
+    <section>
+      <label class="field">Mirrors <span class="val" id="segVal">6</span></label>
+      <input type="range" id="seg" min="2" max="16" step="1" value="6">
+    </section>
+
+    <section>
+      <label class="field">Facets <span class="val" id="facetVal">4</span></label>
+      <input type="range" id="facet" min="1" max="10" step="1" value="4">
+    </section>
+
+    <section>
+      <label class="field">Zoom <span class="val" id="zoomVal">2.5×</span></label>
+      <input type="range" id="zoom" min="0.5" max="8" step="0.1" value="2.5">
+    </section>
+
+    <section>
+      <label class="field">Offset <span class="val" id="offVal">0.18</span></label>
+      <input type="range" id="offset" min="0" max="0.4" step="0.01" value="0.18">
+    </section>
+
+    <button id="reshuffleBtn">Reshuffle facets</button>
+
+    <div class="divider"></div>
+
+    <section>
+      <label class="field" style="cursor:pointer;">
+        <span><input type="checkbox" id="borderToggle" style="margin-right:6px; vertical-align:middle;">Facet borders</span>
+      </label>
+      <input type="range" id="borderThickness" min="0.001" max="0.03" step="0.001" value="0.006">
+      <input type="color" id="borderColor" value="#0b0a10">
+    </section>
+
+    <div class="divider"></div>
+
+    <section>
+      <label class="field">Background</label>
+      <input type="color" id="bgColor" value="#0b0a10">
+    </section>
+
+    <div class="divider"></div>
+
+    <p class="hint">Drag the canvas to spin the object plane. The mirrors stay fixed — only the view underneath moves.</p>
+    <button id="resetBtn">Reset</button>
+  </div>
+</div>
+
+<script>
+// ---------- Procedural base "images" (no external assets needed) ----------
+function makeTexCanvas(drawFn, size=512){
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  drawFn(ctx, size);
+  return c;
+}
+
+const patternDefs = [
+  { name:'Ink Bloom', draw:(ctx,s)=>{
+      const g = ctx.createLinearGradient(0,0,s,s);
+      g.addColorStop(0,'#1a0f2e'); g.addColorStop(1,'#3a1a4a');
+      ctx.fillStyle = g; ctx.fillRect(0,0,s,s);
+      for(let i=0;i<9;i++){
+        ctx.beginPath();
+        const x = Math.random()*s, y = Math.random()*s, r = 30+Math.random()*120;
+        const rg = ctx.createRadialGradient(x,y,0,x,y,r);
+        const hue = 260+Math.random()*140;
+        rg.addColorStop(0, `hsla(${hue},80%,65%,0.85)`);
+        rg.addColorStop(1, `hsla(${hue},80%,50%,0)`);
+        ctx.fillStyle = rg;
+        ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      }
+  }},
+  { name:'Citrus Shards', draw:(ctx,s)=>{
+      ctx.fillStyle = '#0e1512'; ctx.fillRect(0,0,s,s);
+      for(let i=0;i<40;i++){
+        const cx=Math.random()*s, cy=Math.random()*s;
+        const len = 20+Math.random()*90, ang = Math.random()*Math.PI*2;
+        const hue = 30+Math.random()*70;
+        ctx.strokeStyle = `hsla(${hue},90%,60%,0.8)`;
+        ctx.lineWidth = 2+Math.random()*6;
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.lineTo(cx+Math.cos(ang)*len, cy+Math.sin(ang)*len);
+        ctx.stroke();
+      }
+  }},
+  { name:'Coral Reef', draw:(ctx,s)=>{
+      const g = ctx.createLinearGradient(0,0,0,s);
+      g.addColorStop(0,'#001f3a'); g.addColorStop(1,'#004d5c');
+      ctx.fillStyle = g; ctx.fillRect(0,0,s,s);
+      for(let i=0;i<160;i++){
+        const x=Math.random()*s, y=Math.random()*s, r=3+Math.random()*22;
+        const hue = 150+Math.random()*60;
+        ctx.fillStyle = `hsla(${hue},85%,${50+Math.random()*30}%,0.7)`;
+        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      }
+  }},
+  { name:'Ember Grid', draw:(ctx,s)=>{
+      ctx.fillStyle = '#120705'; ctx.fillRect(0,0,s,s);
+      const n=14, cell=s/n;
+      for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+        if(Math.random()>0.55) continue;
+        const hue = 5+Math.random()*35;
+        ctx.fillStyle = `hsla(${hue},90%,${40+Math.random()*35}%,0.9)`;
+        const pad = cell*0.15;
+        ctx.fillRect(i*cell+pad, j*cell+pad, cell-2*pad, cell-2*pad);
+      }
+  }},
+];
+
+const textures = patternDefs.map(p => ({ name:p.name, canvas: makeTexCanvas(p.draw) }));
+
+// ---------- WebGL setup ----------
+const canvas = document.getElementById('gl');
+const dpr = Math.min(window.devicePixelRatio||1, 2);
+function resizeCanvas(){
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.round(rect.width*dpr);
+  const h = Math.round(rect.height*dpr);
+  // Only touch canvas.width/height when the size actually changed. Setting
+  // these properties resets the WebGL drawing buffer even when the value is
+  // unchanged, and calling this every frame caused visible shimmer/flicker,
+  // especially along thin border lines.
+  if(canvas.width !== w || canvas.height !== h){
+    canvas.width = w;
+    canvas.height = h;
+    if(gl) gl.viewport(0,0,canvas.width,canvas.height);
+  }
+}
+const gl = canvas.getContext('webgl');
+if(!gl){ alert('WebGL not supported in this browser.'); }
+
+const vertSrc = `
+attribute vec2 aPos;
+varying vec2 vUv;
+void main(){
+  vUv = aPos*0.5 + 0.5;
+  gl_Position = vec4(aPos,0.0,1.0);
+}`;
+
+const fragSrc = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+uniform vec3 uBg;
+uniform float uDrumRotation;
+uniform float uSegments;
+uniform float uFacets;
+uniform float uZoom;
+uniform float uOffset;
+uniform float uSeed;
+uniform float uShowBorders;
+uniform float uBorderThickness;
+uniform vec3 uBorderColor;
+
+const float TAU = 6.28318530718;
+
+float hash21(vec2 p){
+  p = fract(p*vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+
+vec2 rotate(vec2 v, float a){
+  float c = cos(a), s = sin(a);
+  return mat2(c, s, -s, c) * v;
+}
+
+// Standard sign-of-triangle-area test, used to find which of the 4 fan
+// triangles (jittered center -> two adjacent cell corners) a point sits in.
+float triSign(vec2 p1, vec2 p2, vec2 p3){
+  return (p1.x-p3.x)*(p2.y-p3.y) - (p2.x-p3.x)*(p1.y-p3.y);
+}
+bool pointInTri(vec2 pt, vec2 a, vec2 b, vec2 c){
+  float d1 = triSign(pt, a, b);
+  float d2 = triSign(pt, b, c);
+  float d3 = triSign(pt, c, a);
+  bool hasNeg = (d1 < 0.0) || (d2 < 0.0) || (d3 < 0.0);
+  bool hasPos = (d1 > 0.0) || (d2 > 0.0) || (d3 > 0.0);
+  return !(hasNeg && hasPos);
+}
+
+float distToSegment(vec2 p, vec2 a, vec2 b){
+  vec2 pa = p - a, ba = b - a;
+  float t = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  return length(pa - ba * t);
+}
+
+void main(){
+  // --- Fixed mirror geometry: depends only on screen position, never rotates ---
+  vec2 uv = vUv - 0.5;
+  float r = length(uv);
+  float angle = atan(uv.y, uv.x);
+
+  float wedge = TAU / uSegments;
+  float a = mod(angle, wedge);
+  float folded = abs(a - wedge*0.5); // symmetric fold within the wedge -> static mirror edges
+
+  // Fold back into a flat 2D point. Because this is derived purely from the
+  // static screen angle/radius, it repeats identically (mirrored) in every
+  // wedge, keeping the overall N-fold symmetry.
+  vec2 p = vec2(cos(folded), sin(folded)) * r;
+
+  // --- Cut the folded plane into a square grid, then triangulate each cell ---
+  // by connecting a jittered interior point to its four corners. This is
+  // what makes each "facet" an irregular triangle instead of a rigid wedge slice.
+  float cellSize = 0.75 / uFacets;
+  vec2 cell = floor(p / cellSize);
+  vec2 cellOrigin = cell * cellSize;
+
+  vec2 c00 = cellOrigin;
+  vec2 c10 = cellOrigin + vec2(cellSize, 0.0);
+  vec2 c11 = cellOrigin + vec2(cellSize, cellSize);
+  vec2 c01 = cellOrigin + vec2(0.0, cellSize);
+  vec2 corners[4];
+  corners[0] = c00; corners[1] = c10; corners[2] = c11; corners[3] = c01;
+
+  // Jittered center point, padded inward so no triangle collapses to a sliver.
+  float pad = 0.22;
+  float jx = hash21(cell);
+  float jy = hash21(cell + vec2(17.13, 31.71));
+  vec2 center = cellOrigin + cellSize * mix(vec2(pad), vec2(1.0-pad), vec2(jx, jy));
+
+  int triIndex = 0;
+  vec2 edgeA = corners[0];
+  vec2 edgeB = corners[1];
+  for(int i = 0; i < 4; i++){
+    vec2 c1 = corners[i];
+    vec2 c2 = corners[(i+1 == 4) ? 0 : i+1];
+    if(pointInTri(p, center, c1, c2)){
+      triIndex = i;
+      edgeA = c1;
+      edgeB = c2;
+    }
+  }
+
+  // Each triangular facet gets its own fixed random rotation + mirror flip,
+  // so neighboring facets reflect the object at different, uncoordinated angles.
+  float h = hash21(cell + vec2(3.1, 7.7) + float(triIndex)*2.37 + uSeed);
+  float facetAngle = h * TAU;
+  float flip = (fract(h*13.7) > 0.5) ? -1.0 : 1.0;
+
+  // A minority of facets sit at a slightly tighter zoom than the rest,
+  // like a few panes ground to a different depth in a real prismatic lens.
+  float zh = hash21(cell*1.7 + float(triIndex)*3.1 + uSeed + 91.0);
+  float zoomBump = zh > 0.85 ? 0.2 : (zh > 0.65 ? 0.1 : 0.0);
+  float effectiveZoom = uZoom + zoomBump;
+
+  vec2 localVec = p - center;
+  vec2 rotatedLocal = rotate(localVec * vec2(flip, 1.0), facetAngle) / max(effectiveZoom, 0.001);
+
+  // Each facet peeks at a different fixed point on the object plane.
+  float centerAngle = fract(h*7.13) * TAU;
+  vec2 facetCenter = uOffset * vec2(cos(centerAngle), sin(centerAngle));
+
+  // --- The object plane itself rotates here (drum); mirrors above stay untouched ---
+  vec2 samplePos = 0.5 + rotate(facetCenter + rotatedLocal, uDrumRotation);
+
+  vec3 color = texture2D(uTex, samplePos).rgb;
+
+  // Colored facet borders: distance to the current triangle's three edges.
+  float dEdge = min(
+    distToSegment(p, center, edgeA),
+    min(distToSegment(p, edgeA, edgeB), distToSegment(p, edgeB, center))
+  );
+  float borderMask = uShowBorders * (1.0 - smoothstep(uBorderThickness*0.5, uBorderThickness*0.5 + max(0.0015, uBorderThickness*0.25), dEdge));
+  color = mix(color, uBorderColor, borderMask);
+
+  float mask = 1.0 - smoothstep(0.47, 0.5, r);
+  color = mix(uBg, color, mask);
+
+  gl_FragColor = vec4(color, 1.0);
+}`;
+
+function compileShader(src, type){
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if(!gl.getShaderParameter(sh, gl.COMPILE_STATUS)){
+    console.error(gl.getShaderInfoLog(sh));
+  }
+  return sh;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compileShader(vertSrc, gl.VERTEX_SHADER));
+gl.attachShader(prog, compileShader(fragSrc, gl.FRAGMENT_SHADER));
+gl.linkProgram(prog);
+gl.useProgram(prog);
+
+const quad = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+const aPos = gl.getAttribLocation(prog, 'aPos');
+gl.enableVertexAttribArray(aPos);
+gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+const uTex = gl.getUniformLocation(prog, 'uTex');
+const uBg = gl.getUniformLocation(prog, 'uBg');
+const uDrumRotation = gl.getUniformLocation(prog, 'uDrumRotation');
+const uSegments = gl.getUniformLocation(prog, 'uSegments');
+const uFacets = gl.getUniformLocation(prog, 'uFacets');
+const uZoom = gl.getUniformLocation(prog, 'uZoom');
+const uOffset = gl.getUniformLocation(prog, 'uOffset');
+const uSeed = gl.getUniformLocation(prog, 'uSeed');
+const uShowBorders = gl.getUniformLocation(prog, 'uShowBorders');
+const uBorderThickness = gl.getUniformLocation(prog, 'uBorderThickness');
+const uBorderColor = gl.getUniformLocation(prog, 'uBorderColor');
+
+const glTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, glTex);
+// Textures are always uploaded as square power-of-two canvases (see squareifyImage),
+// so REPEAT wrapping is safe and lets facets sample past the texture edge like a
+// continuous bead-chamber rather than showing a hard seam.
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+function uploadTexture(sourceCanvasOrImage){
+  gl.bindTexture(gl.TEXTURE_2D, glTex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceCanvasOrImage);
+}
+
+// Crop/cover an arbitrary uploaded image onto a 512x512 canvas so it stays
+// power-of-two (required for REPEAT wrapping in WebGL1) regardless of source size.
+function squareifyImage(img, size=512){
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const scale = Math.max(size/img.width, size/img.height);
+  const w = img.width*scale, h = img.height*scale;
+  ctx.drawImage(img, (size-w)/2, (size-h)/2, w, h);
+  return c;
+}
+
+function hexToRgb01(hex){
+  const v = hex.replace('#','');
+  const r = parseInt(v.substring(0,2),16)/255;
+  const g = parseInt(v.substring(2,4),16)/255;
+  const b = parseInt(v.substring(4,6),16)/255;
+  return [r,g,b];
+}
+
+// ---------- State ----------
+const state = {
+  rotationBase: 0,       // from slider, degrees
+  dragRotation: 0,       // from manual drag, radians
+  segments: 6,
+  facets: 4,
+  zoom: 2.5,
+  offset: 0.18,
+  spin: 0.0,
+  seed: Math.random()*100,
+  bg: hexToRgb01('#0b0a10'),
+  showBorders: false,
+  borderThickness: 0.006,
+  borderColor: hexToRgb01('#0b0a10'),
+};
+
+let spinAccum = 0;
+let lastTime = performance.now();
+
+function render(now){
+  const dt = (now - lastTime)/1000;
+  lastTime = now;
+  spinAccum += state.spin * dt;
+
+  resizeCanvas();
+  gl.clearColor(state.bg[0], state.bg[1], state.bg[2], 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  const totalRotation = (state.rotationBase * Math.PI/180) + state.dragRotation + spinAccum;
+
+  gl.useProgram(prog);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, glTex);
+  gl.uniform1i(uTex, 0);
+  gl.uniform3fv(uBg, state.bg);
+  gl.uniform1f(uDrumRotation, totalRotation);
+  gl.uniform1f(uSegments, state.segments);
+  gl.uniform1f(uFacets, state.facets);
+  gl.uniform1f(uZoom, state.zoom);
+  gl.uniform1f(uOffset, state.offset);
+  gl.uniform1f(uSeed, state.seed);
+  gl.uniform1f(uShowBorders, state.showBorders ? 1.0 : 0.0);
+  gl.uniform1f(uBorderThickness, state.borderThickness);
+  gl.uniform3fv(uBorderColor, state.borderColor);
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  requestAnimationFrame(render);
+}
+
+// ---------- UI wiring ----------
+const swatchesEl = document.getElementById('swatches');
+let activeThumb = null;
+
+textures.forEach((tex, i) => {
+  const div = document.createElement('div');
+  div.className = 'thumb' + (i===0 ? ' active' : '');
+  div.title = tex.name;
+  div.appendChild(tex.canvas);
+  div.addEventListener('click', () => {
+    uploadTexture(tex.canvas);
+    if(activeThumb) activeThumb.classList.remove('active');
+    div.classList.add('active');
+    activeThumb = div;
+  });
+  swatchesEl.appendChild(div);
+  if(i===0) activeThumb = div;
+});
+
+const uploadDiv = document.createElement('div');
+uploadDiv.className = 'thumb';
+uploadDiv.id = 'upload-thumb';
+uploadDiv.textContent = '+';
+uploadDiv.title = 'Upload your own image';
+swatchesEl.appendChild(uploadDiv);
+const fileInput = document.getElementById('fileInput');
+uploadDiv.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const img = new Image();
+  img.onload = () => {
+    uploadTexture(squareifyImage(img));
+    if(activeThumb) activeThumb.classList.remove('active');
+    uploadDiv.classList.add('active');
+    uploadDiv.textContent = '';
+    uploadDiv.style.backgroundImage = `url(${img.src})`;
+    uploadDiv.style.backgroundSize = 'cover';
+    uploadDiv.style.backgroundPosition = 'center';
+    activeThumb = uploadDiv;
+  };
+  img.src = URL.createObjectURL(file);
+});
+
+// start with first pattern
+uploadTexture(textures[0].canvas);
+
+const rot = document.getElementById('rot');
+const rotVal = document.getElementById('rotVal');
+rot.addEventListener('input', () => {
+  state.rotationBase = parseFloat(rot.value);
+  rotVal.textContent = rot.value + '°';
+});
+
+const seg = document.getElementById('seg');
+const segVal = document.getElementById('segVal');
+seg.addEventListener('input', () => {
+  state.segments = parseFloat(seg.value);
+  segVal.textContent = seg.value;
+});
+
+const facet = document.getElementById('facet');
+const facetVal = document.getElementById('facetVal');
+facet.addEventListener('input', () => {
+  state.facets = parseFloat(facet.value);
+  facetVal.textContent = facet.value;
+});
+
+const zoom = document.getElementById('zoom');
+const zoomVal = document.getElementById('zoomVal');
+zoom.addEventListener('input', () => {
+  state.zoom = parseFloat(zoom.value);
+  zoomVal.textContent = parseFloat(zoom.value).toFixed(1) + '×';
+});
+
+const offset = document.getElementById('offset');
+const offVal = document.getElementById('offVal');
+offset.addEventListener('input', () => {
+  state.offset = parseFloat(offset.value);
+  offVal.textContent = parseFloat(offset.value).toFixed(2);
+});
+
+document.getElementById('reshuffleBtn').addEventListener('click', () => {
+  state.seed = Math.random()*100;
+});
+
+const borderToggle = document.getElementById('borderToggle');
+borderToggle.addEventListener('change', () => {
+  state.showBorders = borderToggle.checked;
+});
+
+const borderThickness = document.getElementById('borderThickness');
+borderThickness.addEventListener('input', () => {
+  state.borderThickness = parseFloat(borderThickness.value);
+});
+
+const borderColor = document.getElementById('borderColor');
+borderColor.addEventListener('input', () => {
+  state.borderColor = hexToRgb01(borderColor.value);
+});
+
+const spin = document.getElementById('spin');
+const spinVal = document.getElementById('spinVal');
+spin.addEventListener('input', () => {
+  state.spin = parseFloat(spin.value);
+  spinVal.textContent = parseFloat(spin.value).toFixed(2);
+});
+
+const bgColor = document.getElementById('bgColor');
+bgColor.addEventListener('input', () => {
+  state.bg = hexToRgb01(bgColor.value);
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  rot.value = 0; state.rotationBase = 0; rotVal.textContent = '0°';
+  seg.value = 6; state.segments = 6; segVal.textContent = '6';
+  facet.value = 4; state.facets = 4; facetVal.textContent = '4';
+  zoom.value = 2.5; state.zoom = 2.5; zoomVal.textContent = '2.5×';
+  offset.value = 0.18; state.offset = 0.18; offVal.textContent = '0.18';
+  spin.value = 0; state.spin = 0; spinVal.textContent = '0.00';
+  bgColor.value = '#0b0a10'; state.bg = hexToRgb01('#0b0a10');
+  state.dragRotation = 0;
+  borderToggle.checked = false; state.showBorders = false;
+  borderThickness.value = 0.006; state.borderThickness = 0.006;
+  borderColor.value = '#0b0a10'; state.borderColor = hexToRgb01('#0b0a10');
+});
+
+// drag-to-rotate
+let dragging = false;
+let dragStartAngle = 0;
+let dragStartRotation = 0;
+
+function getCanvasCenterAngle(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+  return Math.atan2(clientY - cy, clientX - cx);
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  dragging = true;
+  canvas.setPointerCapture(e.pointerId);
+  dragStartAngle = getCanvasCenterAngle(e.clientX, e.clientY);
+  dragStartRotation = state.dragRotation;
+});
+canvas.addEventListener('pointermove', (e) => {
+  if(!dragging) return;
+  const a = getCanvasCenterAngle(e.clientX, e.clientY);
+  state.dragRotation = dragStartRotation + (a - dragStartAngle);
+});
+canvas.addEventListener('pointerup', () => dragging = false);
+canvas.addEventListener('pointercancel', () => dragging = false);
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = -e.deltaY * 0.001;
+  state.zoom = Math.min(3, Math.max(0.2, state.zoom + delta));
+  zoom.value = state.zoom.toFixed(2);
+  zoomVal.textContent = state.zoom.toFixed(2) + '×';
+}, { passive:false });
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

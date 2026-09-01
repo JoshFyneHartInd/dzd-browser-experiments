@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="{{ site.Language.LanguageCode | default "en-us" }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{ site.Params.description | default .Description }}">
+    <title>{{ site.Title }}</title>
+    <link rel="stylesheet" href="{{ "css/site.css" | relURL }}">
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="masthead">
+        <p class="eyebrow">DangerZoneDad's</p>
+        <h1>{{ .Title }}</h1>
+        <p class="tagline">{{ .Params.tagline }}</p>
+      </header>
+
+      <main>
+        <section class="directory" aria-labelledby="experiment-list-title">
+          <h2 id="experiment-list-title">Pick an experiment</h2>
+          <ul class="experiment-list">
+            {{ range .Params.links }}
+              <li>
+                <a href="{{ .url }}" target="_blank" rel="noopener noreferrer">
+                  <span class="experiment-title">{{ .title }}</span>
+                  <span class="experiment-description">{{ .description }}</span>
+                </a>
+              </li>
+            {{ end }}
+          </ul>
+        </section>
+      </main>
+
+      <footer>
+        <span>DangerZoneDad's Browser Experiments</span>
+        <span aria-hidden="true">*</span>
+        <span>Last updated: {{ now.Format "January 2, 2006" }}</span>
+      </footer>
+    </div>
+  </body>
+</html>

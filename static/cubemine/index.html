@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Cubemine — 3D Minesweeper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0a0e16;
+    --panel:#121826;
+    --panel-line:#212a3d;
+    --ember:#f2a93b;
+    --ember-dim:#8a6423;
+    --ice:#5fd4d0;
+    --text:#e7ecf3;
+    --text-dim:#8993a8;
+    --safe:#22c55e;
+    --danger:#ef4444;
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Space Grotesk', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:var(--void); color:var(--text);
+    font-family:var(--display);
+  }
+  #app{ position:relative; width:100vw; height:100vh; }
+  #scene-holder{ position:absolute; inset:0; }
+  canvas{ display:block; touch-action:none; }
+
+  .hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px;
+    padding:16px 22px;
+    background:linear-gradient(to bottom, rgba(10,14,22,0.92), rgba(10,14,22,0));
+    pointer-events:none;
+    z-index:10;
+    flex-wrap:wrap;
+  }
+  .hud > * { pointer-events:auto; }
+
+  .brand{
+    display:flex; align-items:baseline; gap:10px;
+  }
+  .brand .mark{
+    width:14px; height:14px; border-radius:3px;
+    background:linear-gradient(135deg, var(--safe), var(--ember) 55%, var(--danger));
+    box-shadow:0 0 12px rgba(242,169,59,0.45);
+  }
+  .brand h1{
+    margin:0; font-size:19px; font-weight:700; letter-spacing:0.02em;
+  }
+  .brand span.sub{
+    font-family:var(--mono); font-size:11px; color:var(--text-dim);
+  }
+
+  .controls{
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:10px;
+    padding:8px 10px;
+    flex-wrap:wrap;
+  }
+  .field{
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .field label{
+    font-family:var(--mono); font-size:10px; color:var(--text-dim);
+  }
+  .field input{
+    width:56px;
+    background:#0d1320;
+    border:1px solid var(--panel-line);
+    color:var(--text);
+    border-radius:6px;
+    padding:5px 7px;
+    font-family:var(--mono);
+    font-size:13px;
+  }
+  .field input:focus{ outline:none; border-color:var(--ice); }
+  .hint{ font-family:var(--mono); font-size:9px; color:var(--text-dim); white-space:nowrap; }
+
+  button{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:13px;
+    border:none;
+    border-radius:7px;
+    padding:9px 16px;
+    cursor:pointer;
+    transition:transform 0.08s ease, filter 0.15s ease;
+  }
+  button:active{ transform:scale(0.96); }
+  .btn-primary{
+    background:var(--ember);
+    color:#1a1206;
+  }
+  .btn-primary:hover{ filter:brightness(1.08); }
+
+  .status{
+    display:flex; align-items:center; gap:14px;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:10px;
+    padding:9px 16px;
+    font-family:var(--mono);
+    font-size:12.5px;
+  }
+  .status .stat{ display:flex; align-items:center; gap:6px; }
+  .status .dot{
+    width:8px; height:8px; border-radius:50%;
+  }
+  .dot.mine{ background:var(--danger); }
+  .dot.flag{ background:var(--ember); }
+
+  .legend{
+    position:absolute; bottom:0; left:0; right:0;
+    display:flex; justify-content:center;
+    padding:16px 20px 20px;
+    background:linear-gradient(to top, rgba(10,14,22,0.92), rgba(10,14,22,0));
+    pointer-events:none;
+    z-index:10;
+  }
+  .legend .row{
+    pointer-events:auto;
+    display:flex; gap:22px; flex-wrap:wrap; justify-content:center;
+    font-family:var(--mono); font-size:11.5px; color:var(--text-dim);
+  }
+  .legend kbd{
+    font-family:var(--mono);
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:5px;
+    padding:2px 6px;
+    color:var(--text);
+    font-size:10.5px;
+  }
+
+  .overlay{
+    position:absolute; inset:0;
+    background:rgba(6,9,15,0.82);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index:20;
+    backdrop-filter: blur(2px);
+  }
+  .overlay.show{ display:flex; }
+  .overlay .card{
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:14px;
+    padding:34px 40px;
+    text-align:center;
+    max-width:360px;
+    position:relative;
+  }
+  .overlay .closeBtn{
+    position:absolute;
+    top:10px; right:10px;
+    width:30px; height:30px;
+    padding:0;
+    border-radius:8px;
+    background:transparent;
+    color:var(--text-dim);
+    font-size:15px;
+    line-height:1;
+  }
+  .overlay .closeBtn:hover{ background:var(--panel-line); color:var(--text); }
+  .overlay .card-actions{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+  .btn-secondary{
+    background:transparent;
+    color:var(--text-dim);
+    border:1px solid var(--panel-line);
+  }
+  .btn-secondary:hover{ color:var(--text); border-color:var(--ice); }
+  .overlay .card h2{
+    margin:0 0 8px;
+    font-size:24px;
+  }
+  .overlay .card p{
+    margin:0 0 20px;
+    color:var(--text-dim);
+    font-size:13.5px;
+    line-height:1.5;
+  }
+  .overlay.win .card h2{ color:var(--safe); }
+  .overlay.lose .card h2{ color:var(--danger); }
+
+  @media (max-width: 720px){
+    .hud{ padding:12px; gap:10px; }
+    .brand h1{ font-size:16px; }
+    .brand .sub{ display:none; }
+    .status{ font-size:11px; padding:7px 12px; gap:10px;}
+    .legend .row{ gap:12px; font-size:10px; }
+    .overlay .card{ padding:26px 22px; max-width:88vw; }
+  }
+  @media (pointer: coarse){
+    button{ padding:11px 18px; font-size:14px; }
+    .field input{ min-height:34px; font-size:14px; }
+    .controls{ padding:9px 11px; }
+  }
+  .mode-toggle{
+    position:absolute;
+    bottom:78px; right:16px;
+    display:flex;
+    gap:6px;
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:12px;
+    padding:5px;
+    z-index:15;
+  }
+  .mode-toggle.hidden{ display:none; }
+  .mode-toggle button{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:600;
+    padding:9px 14px;
+    border-radius:8px;
+    background:transparent;
+    color:var(--text-dim);
+  }
+  .mode-toggle button.active{
+    background:var(--ember);
+    color:#1a1206;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="scene-holder"></div>
+
+  <div class="hud">
+    <div class="brand">
+      <div class="mark"></div>
+      <div>
+        <h1>Cubemine</h1>
+        <div class="sub">volumetric minesweeper</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="field">
+        <label for="sizeInput">Cube size</label>
+        <input id="sizeInput" type="number" min="3" max="10" value="5" />
+      </div>
+      <div class="field">
+        <label for="minesInput">Mines</label>
+        <input id="minesInput" type="number" min="1" value="18" />
+      </div>
+      <span class="hint" id="maxHint">max 124</span>
+      <button class="btn-primary" id="newGameBtn">New game</button>
+    </div>
+
+    <div class="status">
+      <div class="stat"><span class="dot mine"></span><span id="minesLeft">18</span> left</div>
+      <div class="stat"><span class="dot flag"></span><span id="flagsUsed">0</span> flagged</div>
+      <div class="stat" id="cellsStat">0 / 0 cleared</div>
+    </div>
+  </div>
+
+  <div class="mode-toggle hidden" id="modeToggle">
+    <button class="active" id="modeRevealBtn" type="button">⛏ Reveal</button>
+    <button id="modeFlagBtn" type="button">⚑ Flag</button>
+  </div>
+
+  <div class="legend">
+    <div class="row" id="legendRow">
+      <span><kbd>drag</kbd> rotate cube</span>
+      <span><kbd>scroll</kbd> zoom</span>
+      <span><kbd>left click</kbd> reveal block</span>
+      <span><kbd>right click</kbd> flag / unflag</span>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="card">
+      <button class="closeBtn" id="overlayCloseBtn" aria-label="Dismiss">✕</button>
+      <h2 id="overlayTitle">Boom.</h2>
+      <p id="overlayText">You uncovered a mine.</p>
+      <div class="card-actions">
+        <button class="btn-primary" id="overlayBtn">Play again</button>
+        <button class="btn-secondary" id="overlayDismissBtn">Keep exploring</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ---------- three.js core setup ----------
+  const holder = document.getElementById('scene-holder');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0e16);
+  scene.fog = new THREE.Fog(0x0a0e16, 12, 55);
+
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 200);
+
+  const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  holder.appendChild(renderer.domElement);
+
+  const ambient = new THREE.AmbientLight(0x8892b0, 0.65);
+  scene.add(ambient);
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(6, 9, 7);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0x5fd4d0, 0.35);
+  rim.position.set(-8, -4, -6);
+  scene.add(rim);
+
+  const cubeGroup = new THREE.Group();
+  scene.add(cubeGroup);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ---------- rotation (drag to spin the cube group) ----------
+  let isDragging = false;
+  let dragMoved = false;
+  let lastX = 0, lastY = 0;
+  let dragStartX = 0, dragStartY = 0;
+  const ROT_SPEED = 0.006;
+  const isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+  let actionMode = 'reveal'; // 'reveal' | 'flag' — used by touch taps and mode toggle
+
+  function pointerDown(x, y){
+    isDragging = true; dragMoved = false;
+    lastX = x; lastY = y; dragStartX = x; dragStartY = y;
+  }
+  function pointerMove(x, y){
+    if(!isDragging) return;
+    const dx = x - lastX, dy = y - lastY;
+    lastX = x; lastY = y;
+    if(Math.abs(x-dragStartX) + Math.abs(y-dragStartY) > 4) dragMoved = true;
+    const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), dx*ROT_SPEED);
+    const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0), dy*ROT_SPEED);
+    cubeGroup.quaternion.premultiply(qYaw);
+    cubeGroup.quaternion.premultiply(qPitch);
+  }
+  function pointerUp(x, y, button){
+    isDragging = false;
+    if(!dragMoved){
+      handleClick(x, y, button);
+    }
+  }
+
+  const dom = renderer.domElement;
+  dom.addEventListener('mousedown', e => pointerDown(e.clientX, e.clientY));
+  window.addEventListener('mousemove', e => pointerMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', e => pointerUp(e.clientX, e.clientY, e.button));
+  dom.addEventListener('contextmenu', e => e.preventDefault());
+
+  // ---------- touch: tap = current mode, long-press = flag, drag = rotate, pinch = zoom ----------
+  const LONG_PRESS_MS = 480;
+  const LONG_PRESS_MOVE_TOLERANCE = 10;
+  let longPressTimer = null;
+  let longPressFired = false;
+  let pinchActive = false;
+  let pinchStartDist = 0;
+  let pinchStartCamDist = 0;
+
+  function touchDist(t0, t1){
+    return Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+  }
+  function clearLongPress(){
+    if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer = null; }
+  }
+
+  dom.addEventListener('touchstart', e => {
+    if(e.touches.length === 2){
+      // switch to pinch-zoom: cancel any single-touch drag/long-press
+      clearLongPress();
+      isDragging = false;
+      pinchActive = true;
+      pinchStartDist = touchDist(e.touches[0], e.touches[1]);
+      pinchStartCamDist = camera.position.length();
+      return;
+    }
+    if(e.touches.length === 1){
+      pinchActive = false;
+      const t = e.touches[0];
+      pointerDown(t.clientX, t.clientY);
+      longPressFired = false;
+      clearLongPress();
+      longPressTimer = setTimeout(() => {
+        if(dragMoved) return;
+        longPressFired = true;
+        const i = firstActionableHit(t.clientX, t.clientY);
+        if(i !== -1){
+          toggleFlag(i);
+          refreshStatus();
+          if(navigator.vibrate) navigator.vibrate(12);
+        }
+      }, LONG_PRESS_MS);
+    }
+  }, {passive:true});
+
+  dom.addEventListener('touchmove', e => {
+    if(pinchActive && e.touches.length === 2){
+      const dist = touchDist(e.touches[0], e.touches[1]);
+      const scale = pinchStartDist / Math.max(dist, 1);
+      const next = THREE.MathUtils.clamp(pinchStartCamDist * scale, minZoom(), maxZoom());
+      camera.position.setLength(next);
+      return;
+    }
+    if(e.touches.length === 1){
+      const t = e.touches[0];
+      pointerMove(t.clientX, t.clientY);
+      if(dragMoved) clearLongPress();
+    }
+  }, {passive:true});
+
+  dom.addEventListener('touchend', e => {
+    clearLongPress();
+    if(e.touches.length === 0) pinchActive = false;
+    if(longPressFired){ isDragging = false; return; }
+    if(e.touches.length === 0) pointerUp(lastX, lastY, actionMode === 'flag' ? 2 : 0);
+  });
+
+  dom.addEventListener('wheel', e => {
+    e.preventDefault();
+    const dist = camera.position.length();
+    const next = THREE.MathUtils.clamp(dist + e.deltaY*0.02, minZoom(), maxZoom());
+    camera.position.setLength(next);
+  }, {passive:false});
+
+  let currentN = 5;
+  function minZoom(){ return currentN * 1.1 + 1.5; }
+  function maxZoom(){ return currentN * 4 + 10; }
+
+  // ---------- touch-only UI: mode toggle + legend text ----------
+  const modeToggle = document.getElementById('modeToggle');
+  const modeRevealBtn = document.getElementById('modeRevealBtn');
+  const modeFlagBtn = document.getElementById('modeFlagBtn');
+  const legendRow = document.getElementById('legendRow');
+
+  if(isTouch){
+    modeToggle.classList.remove('hidden');
+    legendRow.innerHTML = `
+      <span><kbd>drag</kbd> rotate cube</span>
+      <span><kbd>pinch</kbd> zoom</span>
+      <span><kbd>tap</kbd> reveal / flag</span>
+      <span><kbd>hold</kbd> quick-flag</span>
+    `;
+    modeRevealBtn.addEventListener('click', () => {
+      actionMode = 'reveal';
+      modeRevealBtn.classList.add('active');
+      modeFlagBtn.classList.remove('active');
+    });
+    modeFlagBtn.addEventListener('click', () => {
+      actionMode = 'flag';
+      modeFlagBtn.classList.add('active');
+      modeRevealBtn.classList.remove('active');
+    });
+  }
+
+  // ---------- game state ----------
+  let N = 5;
+  let totalCells = 0;
+  let mineCount = 0;
+  let blocks = [];      // flat array of block state objects
+  let meshes = [];       // flat array of THREE.Mesh
+  let minesPlaced = false;
+  let gameOver = false;
+  let revealedSafeCount = 0;
+  let flagsUsed = 0;
+
+  const GAP = 0.22;
+  const UNIT = 1;
+  const STEP = UNIT + GAP;
+
+  const boxGeo = new THREE.BoxGeometry(UNIT*0.86, UNIT*0.86, UNIT*0.86);
+  const coveredMat = new THREE.MeshStandardMaterial({ color:0x6b7280, roughness:0.65, metalness:0.08 });
+
+  function idx(i,j,k){ return (i*N + j)*N + k; }
+
+  const FACE_DIRS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+  function neighborsOf(i,j,k){
+    const out = [];
+    for(const [di,dj,dk] of FACE_DIRS){
+      const ni=i+di, nj=j+dj, nk=k+dk;
+      if(ni>=0 && ni<N && nj>=0 && nj<N && nk>=0 && nk<N) out.push(idx(ni,nj,nk));
+    }
+    return out;
+  }
+
+  // ---------- texture generation ----------
+  function makeTexture(draw){
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    draw(ctx, size);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function countColor(count){
+    // 0 -> neutral cool tone; 1..cap -> green to red hue sweep
+    if(count === 0) return { bg: '#334155', fg: '#cbd5e1' };
+    const cap = 6;
+    const t = Math.min(count, cap) / cap;
+    const hue = (1 - t) * 128; // 128 green -> 0 red
+    const bg = `hsl(${hue.toFixed(0)}, 62%, 38%)`;
+    return { bg, fg: '#f6faf8' };
+  }
+
+  function revealedTexture(count){
+    const { bg, fg } = countColor(count);
+    return makeTexture((ctx, size) => {
+      ctx.fillStyle = bg;
+      ctx.fillRect(0,0,size,size);
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(2,2,size-4,size-4);
+      if(count > 0){
+        ctx.fillStyle = fg;
+        ctx.font = '700 64px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(count), size/2, size/2+4);
+      }
+    });
+  }
+
+  function flaggedTexture(){
+    return makeTexture((ctx, size) => {
+      ctx.fillStyle = '#3a2f13';
+      ctx.fillRect(0,0,size,size);
+      ctx.strokeStyle = 'rgba(242,169,59,0.6)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(2,2,size-4,size-4);
+      ctx.strokeStyle = '#f2a93b';
+      ctx.fillStyle = '#f2a93b';
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(46, 26); ctx.lineTo(46, 102); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(46, 30); ctx.lineTo(86, 42); ctx.lineTo(46, 58); ctx.closePath(); ctx.fill();
+    });
+  }
+
+  function mineTexture(exploded){
+    return makeTexture((ctx, size) => {
+      ctx.fillStyle = exploded ? '#7f1d1d' : '#1c1024';
+      ctx.fillRect(0,0,size,size);
+      ctx.strokeStyle = 'rgba(239,68,68,0.55)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(2,2,size-4,size-4);
+      const cx = size/2, cy = size/2, r = 22;
+      ctx.strokeStyle = '#ef4444';
+      ctx.fillStyle = '#ef4444';
+      ctx.lineWidth = 5;
+      for(let a=0; a<8; a++){
+        const ang = a * Math.PI/4;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(ang)*r, cy + Math.sin(ang)*r);
+        ctx.lineTo(cx + Math.cos(ang)*(r+16), cy + Math.sin(ang)*(r+16));
+        ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+    });
+  }
+
+  // ---------- build / reset ----------
+  function clearScene(){
+    for(const m of meshes){
+      cubeGroup.remove(m);
+      if(m.material.map) m.material.map.dispose();
+      if(m.material !== coveredMat) m.material.dispose();
+    }
+    meshes = [];
+    blocks = [];
+  }
+
+  function buildGrid(n){
+    clearScene();
+    N = n;
+    currentN = n;
+    totalCells = n*n*n;
+    const offset = (n-1)/2 * STEP;
+
+    for(let i=0;i<n;i++){
+      for(let j=0;j<n;j++){
+        for(let k=0;k<n;k++){
+          const mesh = new THREE.Mesh(boxGeo, coveredMat);
+          mesh.position.set(i*STEP - offset, j*STEP - offset, k*STEP - offset);
+          mesh.userData.index = idx(i,j,k);
+          cubeGroup.add(mesh);
+          meshes.push(mesh);
+          blocks.push({ i,j,k, mine:false, revealed:false, flagged:false, count:0 });
+        }
+      }
+    }
+
+    // camera framing
+    const dist = n * 2.35 + 4;
+    camera.position.set(dist*0.62, dist*0.5, dist*0.62);
+    camera.lookAt(0,0,0);
+    cubeGroup.quaternion.identity();
+  }
+
+  function placeMines(avoidIndex){
+    const pool = [];
+    for(let idxc=0; idxc<totalCells; idxc++) if(idxc !== avoidIndex) pool.push(idxc);
+    for(let a=pool.length-1; a>0; a--){
+      const b = Math.floor(Math.random()*(a+1));
+      [pool[a], pool[b]] = [pool[b], pool[a]];
+    }
+    for(let m=0; m<mineCount; m++) blocks[pool[m]].mine = true;
+
+    for(let i=0;i<N;i++)
+      for(let j=0;j<N;j++)
+        for(let k=0;k<N;k++){
+          const b = blocks[idx(i,j,k)];
+          if(b.mine) continue;
+          let c = 0;
+          for(const nb of neighborsOf(i,j,k)) if(blocks[nb].mine) c++;
+          b.count = c;
+        }
+    minesPlaced = true;
+  }
+
+  function setMeshAppearance(i){
+    const b = blocks[i];
+    const mesh = meshes[i];
+    if(mesh.material !== coveredMat){ if(mesh.material.map) mesh.material.map.dispose(); mesh.material.dispose(); }
+
+    if(b.revealed && b.mine){
+      const tex = mineTexture(b.exploded);
+      mesh.material = new THREE.MeshStandardMaterial({ map:tex, roughness:0.5, metalness:0.15, emissive: b.exploded?0x330000:0x000000 });
+    } else if(b.revealed){
+      const tex = revealedTexture(b.count);
+      mesh.material = new THREE.MeshStandardMaterial({ map:tex, roughness:0.55, metalness:0.05, transparent:true, opacity:0.62 });
+    } else if(b.flagged){
+      const tex = flaggedTexture();
+      mesh.material = new THREE.MeshStandardMaterial({ map:tex, roughness:0.6, metalness:0.1 });
+    } else {
+      mesh.material = coveredMat;
+    }
+  }
+
+  // ---------- interaction ----------
+  const raycaster = new THREE.Raycaster();
+  const mouseNDC = new THREE.Vector2();
+
+  function firstActionableHit(clientX, clientY){
+    const rect = dom.getBoundingClientRect();
+    mouseNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    mouseNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouseNDC, camera);
+    const hits = raycaster.intersectObjects(meshes, false);
+    for(const h of hits){
+      const i = h.object.userData.index;
+      if(!blocks[i].revealed) return i;
+    }
+    return -1;
+  }
+
+  function handleClick(x, y, button){
+    if(gameOver) return;
+    const i = firstActionableHit(x, y);
+    if(i === -1) return;
+    if(button === 2){
+      toggleFlag(i);
+    } else {
+      revealCell(i);
+    }
+    refreshStatus();
+  }
+
+  function toggleFlag(i){
+    const b = blocks[i];
+    if(b.revealed) return;
+    b.flagged = !b.flagged;
+    flagsUsed += b.flagged ? 1 : -1;
+    setMeshAppearance(i);
+  }
+
+  function revealCell(i){
+    const b = blocks[i];
+    if(b.flagged || b.revealed) return;
+
+    if(!minesPlaced) placeMines(i);
+
+    if(b.mine){
+      b.exploded = true;
+      b.revealed = true;
+      setMeshAppearance(i);
+      endGame(false);
+      return;
+    }
+
+    // BFS flood fill for zero-count regions
+    const queue = [i];
+    const seen = new Set();
+    while(queue.length){
+      const cur = queue.shift();
+      if(seen.has(cur)) continue;
+      seen.add(cur);
+      const cb = blocks[cur];
+      if(cb.revealed || cb.flagged || cb.mine) continue;
+      cb.revealed = true;
+      revealedSafeCount++;
+      setMeshAppearance(cur);
+      if(cb.count === 0){
+        for(const nb of neighborsOf(cb.i, cb.j, cb.k)){
+          if(!blocks[nb].revealed && !blocks[nb].flagged && !blocks[nb].mine) queue.push(nb);
+        }
+      }
+    }
+
+    if(revealedSafeCount === totalCells - mineCount) endGame(true);
+  }
+
+  function endGame(won){
+    gameOver = true;
+    for(let i=0;i<totalCells;i++){
+      const b = blocks[i];
+      if(b.mine && !b.revealed){
+        b.revealed = true;
+        if(won) b.flagged = true;
+        setMeshAppearance(i);
+      }
+    }
+    showOverlay(won);
+  }
+
+  // ---------- UI wiring ----------
+  const sizeInput = document.getElementById('sizeInput');
+  const minesInput = document.getElementById('minesInput');
+  const maxHint = document.getElementById('maxHint');
+  const minesLeftEl = document.getElementById('minesLeft');
+  const flagsUsedEl = document.getElementById('flagsUsed');
+  const cellsStatEl = document.getElementById('cellsStat');
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayText = document.getElementById('overlayText');
+
+  function clampMineInput(){
+    const n = THREE.MathUtils.clamp(parseInt(sizeInput.value)||5, 3, 10);
+    sizeInput.value = n;
+    const total = n*n*n;
+    const max = total - 1;
+    maxHint.textContent = `max ${max}`;
+    let m = parseInt(minesInput.value) || Math.round(total*0.14);
+    m = THREE.MathUtils.clamp(m, 1, max);
+    minesInput.value = m;
+  }
+
+  function refreshStatus(){
+    minesLeftEl.textContent = Math.max(mineCount - flagsUsed, 0);
+    flagsUsedEl.textContent = flagsUsed;
+    cellsStatEl.textContent = `${revealedSafeCount} / ${totalCells - mineCount} cleared`;
+  }
+
+  function showOverlay(won){
+    overlay.classList.remove('win','lose');
+    overlay.classList.add(won ? 'win' : 'lose');
+    overlayTitle.textContent = won ? 'Cube cleared.' : 'Boom.';
+    overlayText.textContent = won
+      ? `You safely uncovered all ${totalCells - mineCount} clear blocks.`
+      : 'You uncovered a mine. All mines are now revealed.';
+    overlay.classList.add('show');
+  }
+
+  function hideOverlay(){ overlay.classList.remove('show'); }
+
+  function newGame(){
+    clampMineInput();
+    N = parseInt(sizeInput.value);
+    mineCount = parseInt(minesInput.value);
+    minesPlaced = false;
+    gameOver = false;
+    revealedSafeCount = 0;
+    flagsUsed = 0;
+    buildGrid(N);
+    refreshStatus();
+    hideOverlay();
+  }
+
+  sizeInput.addEventListener('change', clampMineInput);
+  minesInput.addEventListener('change', clampMineInput);
+  document.getElementById('newGameBtn').addEventListener('click', newGame);
+  document.getElementById('overlayBtn').addEventListener('click', newGame);
+  document.getElementById('overlayDismissBtn').addEventListener('click', hideOverlay);
+  document.getElementById('overlayCloseBtn').addEventListener('click', hideOverlay);
+  window.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && overlay.classList.contains('show')) hideOverlay();
+  });
+
+  // ---------- render loop ----------
+  function animate(){
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+
+  clampMineInput();
+  newGame();
+  animate();
+})();
+</script>
+</body>
+</html>

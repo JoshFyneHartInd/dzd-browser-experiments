@@ -1,0 +1,174 @@
+:root {
+  --navy: #11106c;
+  --purple: #57229b;
+  --pink: #ed2184;
+  --cyan: #00d9e8;
+  --yellow: #fff22d;
+  --paper: #fffde2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--navy);
+  font-family: Verdana, Geneva, sans-serif;
+  background-color: var(--purple);
+  background-image: radial-gradient(var(--yellow) 1px, transparent 1.5px), radial-gradient(var(--cyan) 1px, transparent 1.5px);
+  background-position: 0 0, 9px 12px;
+  background-size: 18px 18px;
+}
+
+.page-shell {
+  width: min(100% - 2rem, 780px);
+  margin: 3rem auto;
+  padding: 0.8rem;
+  background: var(--paper);
+  border: 5px ridge #fff;
+  box-shadow: 9px 9px 0 var(--navy);
+}
+
+.masthead {
+  padding: 1.5rem 1rem 1.15rem;
+  text-align: center;
+  background: var(--cyan);
+  border: 4px outset #fff;
+}
+
+.eyebrow,
+.tagline {
+  margin: 0;
+  font-family: "Courier New", monospace;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+h1 {
+  margin: 0.35rem 0;
+  color: var(--yellow);
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: clamp(2.6rem, 11vw, 4.8rem);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 0.9;
+  text-transform: uppercase;
+  text-shadow: 3px 3px 0 var(--pink), 6px 6px 0 var(--navy);
+}
+
+main {
+  padding: 1.5rem 0.5rem;
+}
+
+.directory {
+  background: #fff;
+  border: 3px solid var(--navy);
+}
+
+h2 {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  color: #fff;
+  font-size: 1rem;
+  text-align: center;
+  text-transform: uppercase;
+  background: var(--pink);
+  border-bottom: 3px solid var(--navy);
+}
+
+.experiment-list {
+  margin: 0;
+  padding: 0.75rem;
+  list-style: none;
+}
+
+.experiment-list li + li {
+  margin-top: 0.75rem;
+}
+
+.experiment-list a {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.85rem;
+  color: #0000ee;
+  text-decoration: none;
+  background: #e8ffff;
+  border: 3px outset #b4e5e5;
+}
+
+.experiment-list a:hover,
+.experiment-list a:focus-visible {
+  color: var(--yellow);
+  background: var(--purple);
+  border-color: #9b72cf;
+  outline: 2px solid var(--pink);
+  outline-offset: 2px;
+}
+
+.experiment-list a:active {
+  border-style: inset;
+}
+
+.experiment-title {
+  display: block;
+  font-family: "Arial Black", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-decoration: underline;
+}
+
+.experiment-description {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--navy);
+  font-size: 0.82rem;
+}
+
+.experiment-list a:hover .experiment-description,
+.experiment-list a:focus-visible .experiment-description {
+  color: #fff;
+}
+
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.7rem 1rem;
+  color: var(--purple);
+  font-family: "Courier New", monospace;
+  font-size: 0.72rem;
+  font-weight: bold;
+  text-align: center;
+  border-top: 2px dotted var(--purple);
+}
+
+.marquee-copy {
+  margin: 0 0 1.25rem;
+  padding: 0.5rem;
+  color: var(--purple);
+  font-family: "Courier New", monospace;
+  font-size: 0.82rem;
+  font-weight: bold;
+  text-align: center;
+  border-block: 2px dotted var(--pink);
+}
+
+@media (max-width: 420px) {
+  .page-shell {
+    width: calc(100% - 1rem);
+    margin: 0.5rem auto;
+    box-shadow: 5px 5px 0 #000;
+  }
+
+  .masthead {
+    padding-inline: 0.5rem;
+  }
+
+  main {
+    padding: 1rem 0;
+  }
+}
