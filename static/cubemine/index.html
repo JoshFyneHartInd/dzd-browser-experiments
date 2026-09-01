@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Cubemine - 3D Minesweeper</title>
+<title>Cubemine - Volumetric Minesweeper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -258,14 +258,14 @@
       </div>
       <div class="field">
         <label for="minesInput">Mines</label>
-        <input id="minesInput" type="number" min="1" value="18" />
+        <input id="minesInput" type="number" min="1" value="25" />
       </div>
       <span class="hint" id="maxHint">max 124</span>
       <button class="btn-primary" id="newGameBtn">New game</button>
     </div>
 
     <div class="status">
-      <div class="stat"><span class="dot mine"></span><span id="minesLeft">18</span> left</div>
+      <div class="stat"><span class="dot mine"></span><span id="minesLeft">25</span> left</div>
       <div class="stat"><span class="dot flag"></span><span id="flagsUsed">0</span> flagged</div>
       <div class="stat" id="cellsStat">0 / 0 cleared</div>
     </div>

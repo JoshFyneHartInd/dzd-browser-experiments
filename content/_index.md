@@ -5,7 +5,7 @@ tagline = 'A collection of browser experiments created with GenAI'
 [[links]]
 title = 'Cubemine'
 url = '/cubemine/'
-description = '3D Minesweeper'
+description = 'Volumetric Minesweeper'
 
 [[links]]
 title = 'Kaleidoscope'
