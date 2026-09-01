@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Cubemine — 3D Minesweeper</title>
+<title>Cubemine - 3D Minesweeper</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -357,17 +357,17 @@
     cubeGroup.quaternion.premultiply(qYaw);
     cubeGroup.quaternion.premultiply(qPitch);
   }
-  function pointerUp(x, y, button){
+  function pointerUp(x, y, button, ctrlKey = false){
     isDragging = false;
     if(!dragMoved){
-      handleClick(x, y, button);
+      handleClick(x, y, button, ctrlKey);
     }
   }
 
   const dom = renderer.domElement;
   dom.addEventListener('mousedown', e => pointerDown(e.clientX, e.clientY));
   window.addEventListener('mousemove', e => pointerMove(e.clientX, e.clientY));
-  window.addEventListener('mouseup', e => pointerUp(e.clientX, e.clientY, e.button));
+  window.addEventListener('mouseup', e => pointerUp(e.clientX, e.clientY, e.button, e.ctrlKey));
   dom.addEventListener('contextmenu', e => e.preventDefault());
 
   // ---------- touch: tap = current mode, long-press = flag, drag = rotate, pinch = zoom ----------
@@ -676,11 +676,11 @@
     return -1;
   }
 
-  function handleClick(x, y, button){
+  function handleClick(x, y, button, ctrlKey = false){
     if(gameOver) return;
     const i = firstActionableHit(x, y);
     if(i === -1) return;
-    if(button === 2){
+    if(button === 2 || ctrlKey){
       toggleFlag(i);
     } else {
       revealCell(i);
