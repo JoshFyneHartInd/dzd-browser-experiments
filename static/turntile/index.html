@@ -487,7 +487,8 @@ async function resolve() {
       const pts = Math.round(10 * size * (1 + 0.2 * (size - 3) + 0.2 * (step - 1)) * simulMult);
       score += pts; gained += pts; biggest = Math.max(biggest, size);
     }
-    lastEl.textContent = step > 1 ? `+${gained} · chain ×${step}` : `+${gained}`;
+    const comboTxt = simulMult > 1 ? ` · combo ×${simulMult}` : "";
+    lastEl.textContent = (step > 1 ? `+${gained} · chain ×${step}` : `+${gained}`) + comboTxt;
 
     // Union of matched cells
     const cells = new Map();
