@@ -480,19 +480,32 @@ async function resolve() {
     const runs = findRuns(grid);
     if (!runs.length) break;
 
-    // Score per match event, summed across the cascade
+    // Score per match event, summed across the cascade.
+    // If two or three runs land in the same step (e.g. one swap creating
+    // multiple matches at once), each run's points get multiplied by the
+    // number of simultaneous runs (capped at 3x).
     const simulMult = Math.min(runs.length, 3);
+    const cells = new Map();
+    let lineClear = false;
     for (const run of runs) {
-      const size = run.length;
+      let size = run.length;
+      let runCells = run;
+      // A run of 5+ clears (and scores) the entire row or column it's in.
+      if (size >= 5) {
+        const horizontal = run[0][0] === run[1][0];
+        runCells = horizontal
+          ? Array.from({length: N}, (_, c) => [run[0][0], c])
+          : Array.from({length: N}, (_, r) => [r, run[0][1]]);
+        size = N;
+        lineClear = true;
+      }
       const pts = Math.round(10 * size * (1 + 0.2 * (size - 3) + 0.2 * (step - 1)) * simulMult);
       score += pts; gained += pts; biggest = Math.max(biggest, size);
+      for (const [r, c] of runCells) cells.set(r*N + c, [r, c]);
     }
     const comboTxt = simulMult > 1 ? ` · combo ×${simulMult}` : "";
-    lastEl.textContent = (step > 1 ? `+${gained} · chain ×${step}` : `+${gained}`) + comboTxt;
-
-    // Union of matched cells
-    const cells = new Map();
-    for (const run of runs) for (const [r, c] of run) cells.set(r*N + c, [r, c]);
+    const lineTxt = lineClear ? ` · line clear!` : "";
+    lastEl.textContent = (step > 1 ? `+${gained} · chain ×${step}` : `+${gained}`) + comboTxt + lineTxt;
 
     // Matched tiles drop off the bottom of the board
     const drops = [];
