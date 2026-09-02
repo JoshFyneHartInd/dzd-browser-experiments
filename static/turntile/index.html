@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Turntile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #E8EBEF;
+    --board: #D9DEE4;
+    --ink: #1E2328;
+    --muted: #6A7380;
+    --line: #C6CCD4;
+    --panel: #F4F6F8;
+    --accent: #2E7E7A;
+    --accent-ink: #ffffff;
+    --shadow: 0 1px 2px rgba(20,25,30,.08);
+    --radius: 14px;
+  }
+  html[data-theme="dark"] {
+    --bg: #171A1F;
+    --board: #21252C;
+    --ink: #ECEEF1;
+    --muted: #8B94A1;
+    --line: #333942;
+    --panel: #1F2329;
+    --accent: #7DD0C6;
+    --accent-ink: #10201E;
+    --shadow: 0 1px 2px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.4;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden auto;
+    transition: background .3s, color .3s;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  #app {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 8px;
+    padding: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .wordmark { font-weight: 800; font-size: 20px; letter-spacing: -.01em; margin: 0; }
+  .wordmark span { display:inline-block; transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+  .seedchip {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--panel); border-radius: 999px;
+    padding: 4px 6px 4px 12px; font-size: 13px; color: var(--muted);
+  }
+  .seedchip code { font-family: inherit; font-weight: 700; color: var(--ink); }
+  .seedchip button {
+    border: 0; background: transparent; padding: 2px 8px; border-radius: 999px; color: var(--muted);
+  }
+  .seedchip button:hover { background: var(--line); color: var(--ink); }
+  .iconbtn {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--panel); display: grid; place-items: center; font-size: 18px;
+    box-shadow: var(--shadow);
+  }
+  .iconbtn:hover { border-color: var(--muted); }
+
+  #stage { position: relative; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #boardwrap {
+    position: relative; border-radius: var(--radius); background: var(--board);
+    box-shadow: inset 0 0 0 1px var(--line);
+    transition: background .3s;
+  }
+  #boardwrap canvas { display: block; width: 100%; height: 100%; touch-action: none; border-radius: var(--radius); }
+
+  /* Rotate buttons live on the board: portrait = below its corners, landscape = beside its top corners */
+  .rotate {
+    position: absolute; width: 64px; height: 64px; border-radius: 50%;
+    border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow);
+    display: grid; place-items: center; font-size: 30px; line-height: 1;
+    transition: transform .15s, opacity .2s;
+    top: calc(100% + 12px);
+  }
+  #rotr { left: 0; }
+  #rotl { right: 0; }
+  .rotate:hover { border-color: var(--muted); }
+  .rotate:active { transform: scale(.94); }
+  .rotate:disabled { opacity: .35; cursor: default; }
+
+  #under { padding-top: 12px; min-height: 76px; text-align: center; display: grid; gap: 4px; width: 100%; }
+  .score { display: grid; }
+  .score .label { font-size: 13px; color: var(--muted); }
+  .score .value { font-size: 40px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .score .last { font-size: 13px; color: var(--muted); min-height: 1.4em; }
+  .hint { font-size: 13px; color: var(--muted); }
+  .textbtn {
+    border: 1px solid var(--line); background: var(--panel); border-radius: 999px;
+    padding: 8px 16px; font-weight: 600; box-shadow: var(--shadow);
+  }
+  .textbtn:hover { border-color: var(--muted); }
+  .textbtn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .textbtn.primary:hover { filter: brightness(1.05); }
+  #newgame { margin-left: auto; }
+
+  /* Portrait: the board fills the width, so give the chrome more presence */
+  @media (orientation: portrait), (max-width: 699px) {
+    #app { padding: 16px; gap: 14px; }
+    .wordmark { font-size: 28px; }
+    .seedchip { font-size: 15px; padding: 6px 8px 6px 14px; }
+    .iconbtn { width: 48px; height: 48px; font-size: 22px; }
+    .textbtn { padding: 11px 20px; font-size: 17px; }
+    .rotate { width: 84px; height: 84px; font-size: 40px; top: calc(100% + 16px); }
+    #under { padding-top: 16px; min-height: 100px; gap: 8px; }
+    .score .label { font-size: 15px; }
+    .score .value { font-size: 52px; }
+    .score .last { font-size: 15px; }
+    .hint { font-size: 15px; max-width: 34ch; margin: 0 auto; }
+    #stage { justify-content: flex-start; }
+  }
+
+  @media (orientation: landscape) and (min-width: 700px) {
+    #app { height: 100dvh; }
+    header { padding-right: 200px; }
+    .score { position: absolute; top: 12px; right: 12px; text-align: right; z-index: 2; }
+    #under { min-height: 0; }
+    .rotate { top: 0; }
+    #rotr { left: auto; right: calc(100% + 16px); }
+    #rotl { right: auto; left: calc(100% + 16px); }
+    .score .value { font-size: 44px; }
+  }
+
+  /* Modals */
+  .overlay {
+    position: fixed; inset: 0; display: grid; place-items: center; padding: 20px;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    z-index: 10;
+  }
+  .overlay[hidden] { display: none; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+    padding: 24px; width: min(100%, 360px); box-shadow: 0 12px 40px rgba(0,0,0,.12);
+    display: grid; gap: 14px;
+  }
+  .card h2 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+  .card p { margin: 0; color: var(--muted); }
+  .card .big { font-size: 44px; font-weight: 800; letter-spacing: -.02em; line-height: 1; color: var(--ink); }
+  .card .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .card input {
+    font: inherit; width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  }
+  .card .seedform { display: grid; gap: 8px; }
+  .card .seedform[hidden] { display: none; }
+  .card .foot { font-size: 13px; color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wordmark span, .rotate { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 class="wordmark">Turn<span id="tilechar">tile</span></h1>
+    <div class="seedchip" id="seedchip" title="Seed for this board">
+      Seed <code id="seedtext">—</code>
+      <button id="copyseed" type="button" aria-label="Copy seed">Copy</button>
+    </div>
+    <button class="textbtn" id="newgame" type="button">New game</button>
+    <button class="iconbtn" id="theme" type="button" aria-label="Switch theme">☾</button>
+  </header>
+
+  <div id="stage">
+    <div id="boardwrap">
+      <canvas id="c" aria-label="Game board"></canvas>
+      <button class="rotate" id="rotr" type="button" aria-label="Rotate board right" title="Rotate right (E)">↻</button>
+      <button class="rotate" id="rotl" type="button" aria-label="Rotate board left" title="Rotate left (Q)">↺</button>
+    </div>
+    <div id="under">
+      <div class="score">
+        <div class="label">Score</div>
+        <div class="value" id="score">0</div>
+        <div class="last" id="last"></div>
+      </div>
+      <div class="hint" id="hint">Tap a tile, then a neighbor, to swap. Rotate anytime between swaps.</div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="menu">
+  <div class="card">
+    <h2>Turntile</h2>
+    <p>Match three. Rotate the board to change how the tiles fall. No timer, no move limit.</p>
+    <div class="row">
+      <button class="textbtn primary" id="m-new" type="button">New game</button>
+      <button class="textbtn" id="m-seedbtn" type="button">Enter seed</button>
+    </div>
+    <div class="seedform" id="m-seedform" hidden>
+      <input id="m-seed" type="text" placeholder="Seed from a friend" autocomplete="off" spellcheck="false" maxlength="40">
+      <div class="row"><button class="textbtn primary" id="m-start" type="button">Start with seed</button></div>
+    </div>
+    <div class="foot">Same seed, same board — share it and compare scores.</div>
+  </div>
+</div>
+
+<div class="overlay" id="over" hidden>
+  <div class="card">
+    <h2>No moves left</h2>
+    <p>Final score</p>
+    <div class="big" id="o-score">0</div>
+    <p>Seed <strong id="o-seed" style="color:var(--ink)"></strong></p>
+    <div class="row">
+      <button class="textbtn primary" id="o-new" type="button">New game</button>
+      <button class="textbtn" id="o-retry" type="button">Play this seed again</button>
+      <button class="textbtn" id="o-copy" type="button">Copy seed</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+"use strict";
+const TILES = ["tiles/01-red_half.png", "tiles/02-green_half.png", "tiles/03-blue_half.png", "tiles/04-yellow_half.png", "tiles/05-orange_half.png"];
+const N = 8, TYPES = 5, HALF = 4.4, TILE_SIZE = 0.94;
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const T = REDUCED ? 0.25 : 1; // global animation time scale
+
+// ---------- Seeded RNG ----------
+function hashStr(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  h = Math.imul(h ^ (h >>> 16), 2246822507);
+  h = Math.imul(h ^ (h >>> 13), 3266489909);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+function mulberry32(a) {
+  return () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function randomSeed() {
+  const a = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 6; i++) s += a[Math.floor(Math.random() * a.length)];
+  return s;
+}
+
+// ---------- Tween system ----------
+const tweens = [];
+const ease = {
+  linear: t => t,
+  outCubic: t => 1 - Math.pow(1 - t, 3),
+  inOutCubic: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2,
+  inQuad: t => t*t,
+  outBack: t => { const c = 1.4; return 1 + c*Math.pow(t-1,3) + (c-1)*Math.pow(t-1,2); }
+};
+function tween(obj, to, dur, fn = ease.outCubic) {
+  dur *= T;
+  return new Promise(res => {
+    const from = {}; for (const k in to) from[k] = obj[k];
+    tweens.push({ obj, from, to, t0: performance.now(), dur: Math.max(dur, 0.001) * 1000, fn, res });
+  });
+}
+function stepTweens(now) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i];
+    let p = Math.min(1, (now - tw.t0) / tw.dur);
+    const e = tw.fn(p);
+    for (const k in tw.to) tw.obj[k] = tw.from[k] + (tw.to[k] - tw.from[k]) * e;
+    if (p >= 1) { tweens.splice(i, 1); tw.res(); }
+  }
+}
+const wait = ms => new Promise(r => setTimeout(r, ms * T));
+
+// ---------- Three.js setup ----------
+const canvas = document.getElementById("c");
+const wrap = document.getElementById("boardwrap");
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-HALF, HALF, HALF, -HALF, 0.1, 10);
+camera.position.z = 5;
+const boardGroup = new THREE.Group();
+scene.add(boardGroup);
+
+const loader = new THREE.TextureLoader();
+const textures = TILES.map(src => {
+  const tx = loader.load(src);
+  tx.encoding = THREE.sRGBEncoding;
+  tx.minFilter = THREE.LinearMipmapLinearFilter;
+  tx.anisotropy = 4;
+  return tx;
+});
+const tileGeo = new THREE.PlaneGeometry(TILE_SIZE, TILE_SIZE);
+
+// Selection ring texture (rounded outline drawn once)
+const ringTex = (() => {
+  const cv = document.createElement("canvas"); cv.width = cv.height = 256;
+  const g = cv.getContext("2d");
+  g.strokeStyle = "#fff"; g.lineWidth = 16;
+  const r = 34, p = 10, s = 256 - p*2;
+  g.beginPath();
+  g.moveTo(p+r, p); g.arcTo(p+s, p, p+s, p+s, r); g.arcTo(p+s, p+s, p, p+s, r);
+  g.arcTo(p, p+s, p, p, r); g.arcTo(p, p, p+s, p, r); g.closePath(); g.stroke();
+  const tx = new THREE.CanvasTexture(cv); tx.encoding = THREE.sRGBEncoding; return tx;
+})();
+const ringMat = new THREE.MeshBasicMaterial({ map: ringTex, transparent: true, opacity: 0 });
+const ring = new THREE.Mesh(new THREE.PlaneGeometry(1.06, 1.06), ringMat);
+ring.position.z = 0.02;
+boardGroup.add(ring);
+
+function readAccent() {
+  const col = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  ringMat.color.set(col || "#2E7E7A");
+}
+
+function px(r, c) { return { x: c - (N-1)/2, y: (N-1)/2 - r }; }
+
+function makeTile(type, r, c) {
+  const mat = new THREE.MeshBasicMaterial({ map: textures[type], transparent: true });
+  const mesh = new THREE.Mesh(tileGeo, mat);
+  const p = px(r, c); mesh.position.set(p.x, p.y, 0);
+  boardGroup.add(mesh);
+  return { t: type, mesh };
+}
+function killTile(tile) { boardGroup.remove(tile.mesh); tile.mesh.material.dispose(); }
+
+// ---------- Game state ----------
+let grid = [], rng = null, seed = "", state = "menu";
+let score = 0, shownScore = 0;
+let sel = null, drag = null;
+
+const $ = id => document.getElementById(id);
+const scoreEl = $("score"), lastEl = $("last");
+const rotl = $("rotl"), rotr = $("rotr");
+
+function setState(s) {
+  state = s;
+  const canRotate = s === "idle";
+  rotl.disabled = rotr.disabled = !canRotate;
+}
+
+function inb(r, c) { return r >= 0 && r < N && c >= 0 && c < N; }
+
+// Find all horizontal/vertical runs of 3+ same type
+function findRuns(g) {
+  const runs = [];
+  for (let r = 0; r < N; r++) {
+    let c = 0;
+    while (c < N) {
+      let e = c;
+      while (e + 1 < N && g[r][e+1] && g[r][c] && g[r][e+1].t === g[r][c].t) e++;
+      if (g[r][c] && e - c + 1 >= 3) runs.push(Array.from({length: e-c+1}, (_, i) => [r, c+i]));
+      c = e + 1;
+    }
+  }
+  for (let c = 0; c < N; c++) {
+    let r = 0;
+    while (r < N) {
+      let e = r;
+      while (e + 1 < N && g[e+1][c] && g[r][c] && g[e+1][c].t === g[r][c].t) e++;
+      if (g[r][c] && e - r + 1 >= 3) runs.push(Array.from({length: e-r+1}, (_, i) => [r+i, c]));
+      r = e + 1;
+    }
+  }
+  return runs;
+}
+
+function swapCells(g, a, b) {
+  const tmp = g[a.r][a.c]; g[a.r][a.c] = g[b.r][b.c]; g[b.r][b.c] = tmp;
+}
+
+function hasValidMove(g) {
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    for (const [dr, dc] of [[0,1],[1,0]]) {
+      const r2 = r+dr, c2 = c+dc;
+      if (!inb(r2, c2)) continue;
+      swapCells(g, {r,c}, {r:r2,c:c2});
+      const ok = findRuns(g).length > 0;
+      swapCells(g, {r,c}, {r:r2,c:c2});
+      if (ok) return true;
+    }
+  }
+  return false;
+}
+
+function genBoard() {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const g = Array.from({length: N}, () => Array(N).fill(null));
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      const bad = new Set();
+      if (c >= 2 && g[r][c-1].t === g[r][c-2].t) bad.add(g[r][c-1].t);
+      if (r >= 2 && g[r-1][c].t === g[r-2][c].t) bad.add(g[r-1][c].t);
+      const opts = []; for (let t = 0; t < TYPES; t++) if (!bad.has(t)) opts.push(t);
+      g[r][c] = { t: opts[Math.floor(rng() * opts.length)] };
+    }
+    if (hasValidMove(g)) return g;
+  }
+  return null;
+}
+
+function clearBoard() {
+  for (const row of grid) for (const t of row) if (t && t.mesh) killTile(t);
+  grid = [];
+}
+
+function startGame(s) {
+  seed = (s || "").trim() || randomSeed();
+  rng = mulberry32(hashStr(seed));
+  clearBoard();
+  const g = genBoard();
+  grid = g.map((row, r) => row.map((cell, c) => makeTile(cell.t, r, c)));
+  score = shownScore = 0; scoreEl.textContent = "0"; lastEl.textContent = "";
+  $("seedtext").textContent = seed;
+  $("menu").hidden = true; $("over").hidden = true;
+  boardGroup.rotation.z = 0;
+  clearSel();
+  setState("idle");
+}
+
+// ---------- Selection ----------
+function setSel(cell) {
+  sel = cell;
+  const p = px(cell.r, cell.c);
+  ring.position.x = p.x; ring.position.y = p.y;
+  ring.scale.set(1.15, 1.15, 1);
+  tween(ring.scale, { x: 1, y: 1 }, 0.25, ease.outBack);
+  tween(ringMat, { opacity: 1 }, 0.15);
+}
+function clearSel() { sel = null; tween(ringMat, { opacity: 0 }, 0.15); }
+
+// ---------- Swap & resolve ----------
+async function doSwap(a, b) {
+  if (state !== "idle") return;
+  clearSel();
+  setState("busy");
+  const A = grid[a.r][a.c], B = grid[b.r][b.c];
+  const pa = px(a.r, a.c), pb = px(b.r, b.c);
+  A.mesh.position.z = 0.01;
+  await Promise.all([tween(A.mesh.position, { x: pb.x, y: pb.y }, 0.22, ease.inOutCubic),
+                     tween(B.mesh.position, { x: pa.x, y: pa.y }, 0.22, ease.inOutCubic)]);
+  A.mesh.position.z = 0;
+  swapCells(grid, a, b);
+  if (findRuns(grid).length === 0) {
+    swapCells(grid, a, b);
+    await wait(60);
+    await Promise.all([tween(A.mesh.position, { x: pa.x, y: pa.y }, 0.22, ease.inOutCubic),
+                       tween(B.mesh.position, { x: pb.x, y: pb.y }, 0.22, ease.inOutCubic)]);
+    setState("idle");
+    return;
+  }
+  await resolve();
+}
+
+async function resolve() {
+  let step = 1, gained = 0, biggest = 0;
+  while (true) {
+    const runs = findRuns(grid);
+    if (!runs.length) break;
+
+    // Score per match event, summed across the cascade
+    for (const run of runs) {
+      const size = run.length;
+      const pts = Math.round(10 * size * (1 + 0.2 * (size - 3) + 0.2 * (step - 1)));
+      score += pts; gained += pts; biggest = Math.max(biggest, size);
+    }
+    lastEl.textContent = step > 1 ? `+${gained} · chain ×${step}` : `+${gained}`;
+
+    // Union of matched cells
+    const cells = new Map();
+    for (const run of runs) for (const [r, c] of run) cells.set(r*N + c, [r, c]);
+
+    // Matched tiles drop off the bottom of the board
+    const drops = [];
+    for (const [r, c] of cells.values()) {
+      const t = grid[r][c]; grid[r][c] = null;
+      t.mesh.position.z = -0.01;
+      drops.push(Promise.all([
+        tween(t.mesh.position, { y: t.mesh.position.y - 3.2 }, 0.42, ease.inQuad),
+        tween(t.mesh.material, { opacity: 0 }, 0.38, ease.inQuad),
+        tween(t.mesh.scale, { x: 0.7, y: 0.7 }, 0.42, ease.inQuad)
+      ]).then(() => killTile(t)));
+    }
+    await Promise.all(drops);
+
+    // Gravity: compact each column, spawn new tiles above (deterministic order)
+    const falls = [];
+    for (let c = 0; c < N; c++) {
+      const col = [];
+      for (let r = N-1; r >= 0; r--) if (grid[r][c]) col.push(grid[r][c]);
+      const missing = N - col.length;
+      for (let r = 0; r < N; r++) grid[r][c] = null;
+      let r = N - 1;
+      for (const t of col) { grid[r][c] = t; r--; }
+      for (let k = 0; k < missing; k++) {
+        const row = missing - 1 - k;                // fill from bottom of gap upward
+        const t = makeTile(Math.floor(rng() * TYPES), -1 - k, c);
+        t.mesh.material.opacity = 0;
+        tween(t.mesh.material, { opacity: 1 }, 0.2);
+        grid[row][c] = t;
+      }
+      for (let rr = 0; rr < N; rr++) {
+        const t = grid[rr][c], p = px(rr, c);
+        const dist = Math.abs(t.mesh.position.y - p.y);
+        if (dist > 0.001) falls.push(tween(t.mesh.position, { y: p.y }, 0.22 + 0.06 * dist, ease.outCubic));
+      }
+    }
+    await Promise.all(falls);
+    step++;
+  }
+  if (!hasValidMove(grid)) gameOver(); else setState("idle");
+}
+
+function gameOver() {
+  setState("over");
+  shownScore = score; scoreEl.textContent = score;
+  $("o-score").textContent = score;
+  $("o-seed").textContent = seed;
+  setTimeout(() => { $("over").hidden = false; }, 350 * T);
+}
+
+// ---------- Rotation ----------
+async function rotate(dir) { // dir: +1 = right/clockwise, -1 = left/counterclockwise
+  if (state !== "idle") return;
+  clearSel();
+  setState("busy");
+  const wm = $("tilechar");
+  wm.style.transform = `rotate(${dir * 90}deg)`;
+  await tween(boardGroup.rotation, { z: -dir * Math.PI / 2 }, 0.55, ease.inOutCubic);
+  // Remap grid to the new screen orientation
+  const g = Array.from({length: N}, () => Array(N).fill(null));
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++)
+    g[r][c] = dir > 0 ? grid[N-1-c][r] : grid[c][N-1-r];
+  grid = g;
+  boardGroup.rotation.z = 0;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const p = px(r, c); grid[r][c].mesh.position.set(p.x, p.y, 0); grid[r][c].mesh.rotation.z = 0;
+  }
+  wm.style.transition = "none"; wm.style.transform = "none";
+  requestAnimationFrame(() => { wm.style.transition = ""; });
+  setState("idle");
+}
+rotl.addEventListener("click", () => rotate(-1));
+rotr.addEventListener("click", () => rotate(1));
+addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "q" || e.key === "Q" || e.key === "ArrowLeft") rotate(-1);
+  if (e.key === "e" || e.key === "E" || e.key === "ArrowRight") rotate(1);
+});
+
+// ---------- Pointer input ----------
+function toCell(e) {
+  const rc = canvas.getBoundingClientRect();
+  const nx = (e.clientX - rc.left) / rc.width, ny = (e.clientY - rc.top) / rc.height;
+  const x = (nx * 2 - 1) * HALF, y = (1 - ny * 2) * HALF;
+  const c = Math.floor(x + N/2), r = Math.floor(N/2 - y);
+  return inb(r, c) ? { r, c } : null;
+}
+const adjacent = (a, b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
+const same = (a, b) => a.r === b.r && a.c === b.c;
+
+canvas.addEventListener("pointerdown", e => {
+  if (state !== "idle") return;
+  const cell = toCell(e); if (!cell) return;
+  drag = { ...cell, x: e.clientX, y: e.clientY, moved: false };
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener("pointermove", e => {
+  if (!drag || drag.moved || state !== "idle") return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  const cellPx = canvas.clientWidth / (HALF * 2);
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < cellPx * 0.35) return;
+  drag.moved = true;
+  const dr = Math.abs(dy) > Math.abs(dx) ? Math.sign(dy) : 0;
+  const dc = dr === 0 ? Math.sign(dx) : 0;
+  const tgt = { r: drag.r + dr, c: drag.c + dc };
+  if (inb(tgt.r, tgt.c)) doSwap({ r: drag.r, c: drag.c }, tgt);
+  drag = null;
+});
+canvas.addEventListener("pointerup", e => {
+  if (!drag) return;
+  const cell = { r: drag.r, c: drag.c };
+  if (!drag.moved && state === "idle") {
+    if (sel && same(sel, cell)) clearSel();
+    else if (sel && adjacent(sel, cell)) doSwap(sel, cell);
+    else setSel(cell);
+  }
+  drag = null;
+});
+canvas.addEventListener("pointercancel", () => { drag = null; });
+
+// ---------- Layout ----------
+const under = $("under");
+const landscapeMQ = matchMedia("(orientation: landscape) and (min-width: 700px)");
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  let size;
+  if (landscapeMQ.matches) {
+    size = Math.min(w - 2 * 80, h - under.offsetHeight, 1080);  // room for flanking buttons; cap at 1080
+  } else {
+    size = w;                                                    // portrait: full width, page scrolls if needed
+  }
+  size = Math.max(120, Math.floor(size));
+  wrap.style.width = wrap.style.height = size + "px";
+  renderer.setSize(size, size, false);
+}
+landscapeMQ.addEventListener("change", resize);
+new ResizeObserver(resize).observe(stage);
+resize();
+
+// ---------- Theme ----------
+const themeBtn = $("theme");
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  themeBtn.textContent = t === "dark" ? "☀" : "☾";
+  readAccent();
+}
+applyTheme(matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+themeBtn.addEventListener("click", () =>
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+
+// ---------- Menus ----------
+async function copySeed(btn) {
+  try { await navigator.clipboard.writeText(seed); } catch (_) {}
+  const old = btn.textContent; btn.textContent = "Copied";
+  setTimeout(() => { btn.textContent = old; }, 1200);
+}
+$("copyseed").addEventListener("click", e => copySeed(e.currentTarget));
+$("o-copy").addEventListener("click", e => copySeed(e.currentTarget));
+$("m-new").addEventListener("click", () => startGame());
+$("m-seedbtn").addEventListener("click", () => {
+  const f = $("m-seedform"); f.hidden = !f.hidden; if (!f.hidden) $("m-seed").focus();
+});
+$("m-start").addEventListener("click", () => startGame($("m-seed").value));
+$("m-seed").addEventListener("keydown", e => { if (e.key === "Enter") startGame($("m-seed").value); });
+$("o-new").addEventListener("click", () => startGame());
+$("o-retry").addEventListener("click", () => startGame(seed));
+$("newgame").addEventListener("click", () => {
+  if (state === "busy") return;
+  $("m-seedform").hidden = true; $("m-seed").value = "";
+  $("menu").hidden = false;
+});
+
+// ---------- Render loop ----------
+function frame(now) {
+  stepTweens(now);
+  // Tiles counter-rotate so they always face up
+  const rz = -boardGroup.rotation.z;
+  for (const row of grid) for (const t of row) if (t) t.mesh.rotation.z = rz;
+  // Score counts up smoothly while cascades resolve
+  if (shownScore !== score) {
+    const diff = score - shownScore;
+    shownScore = Math.abs(diff) < 1 ? score : shownScore + Math.ceil(diff * 0.15 * (REDUCED ? 6 : 1));
+    if (shownScore > score) shownScore = score;
+    scoreEl.textContent = Math.round(shownScore);
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+setState("menu");
+})();
+</script>
+</body>
+</html>
