@@ -481,9 +481,10 @@ async function resolve() {
     if (!runs.length) break;
 
     // Score per match event, summed across the cascade
+    const simulMult = Math.min(runs.length, 3);
     for (const run of runs) {
       const size = run.length;
-      const pts = Math.round(10 * size * (1 + 0.2 * (size - 3) + 0.2 * (step - 1)));
+      const pts = Math.round(10 * size * (1 + 0.2 * (size - 3) + 0.2 * (step - 1)) * simulMult);
       score += pts; gained += pts; biggest = Math.max(biggest, size);
     }
     lastEl.textContent = step > 1 ? `+${gained} · chain ×${step}` : `+${gained}`;
