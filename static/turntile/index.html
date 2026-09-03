@@ -117,10 +117,10 @@
   /* Portrait: the board fills the width, so give the chrome more presence */
   @media (orientation: portrait), (max-width: 699px) {
     #app { padding: 16px; gap: 14px; }
-    .wordmark { font-size: 28px; }
-    .seedchip { font-size: 15px; padding: 6px 8px 6px 14px; }
+    .wordmark { font-size: 24px; }
+    .seedchip { font-size: 14px; padding: 5px 6px 5px 14px; }
     .iconbtn { width: 48px; height: 48px; font-size: 22px; }
-    .textbtn { padding: 11px 20px; font-size: 17px; }
+    .textbtn { padding: 10px 18px; font-size: 14px; }
     .rotate { width: 84px; height: 84px; font-size: 40px; top: calc(100% + 16px); }
     #under { padding-top: 16px; min-height: 100px; gap: 8px; }
     .score .label { font-size: 15px; }
@@ -480,17 +480,32 @@ async function resolve() {
     const runs = findRuns(grid);
     if (!runs.length) break;
 
-    // Score per match event, summed across the cascade
-    for (const run of runs) {
-      const size = run.length;
-      const pts = Math.round(10 * size * (1 + 0.2 * (size - 3) + 0.2 * (step - 1)));
-      score += pts; gained += pts; biggest = Math.max(biggest, size);
-    }
-    lastEl.textContent = step > 1 ? `+${gained} · chain ×${step}` : `+${gained}`;
-
-    // Union of matched cells
+    // Score per match event, summed across the cascade.
+    // If two or three runs land in the same step (e.g. one swap creating
+    // multiple matches at once), each run's points get multiplied by the
+    // number of simultaneous runs (capped at 3x).
+    const simulMult = Math.min(runs.length, 3);
     const cells = new Map();
-    for (const run of runs) for (const [r, c] of run) cells.set(r*N + c, [r, c]);
+    let lineClear = false;
+    for (const run of runs) {
+      let size = run.length;
+      let runCells = run;
+      // A run of 5+ clears (and scores) the entire row or column it's in.
+      if (size >= 5) {
+        const horizontal = run[0][0] === run[1][0];
+        runCells = horizontal
+          ? Array.from({length: N}, (_, c) => [run[0][0], c])
+          : Array.from({length: N}, (_, r) => [r, run[0][1]]);
+        size = N;
+        lineClear = true;
+      }
+      const pts = Math.round(10 * size * (1 + 0.2 * (size - 3) + 0.2 * (step - 1)) * simulMult);
+      score += pts; gained += pts; biggest = Math.max(biggest, size);
+      for (const [r, c] of runCells) cells.set(r*N + c, [r, c]);
+    }
+    const comboTxt = simulMult > 1 ? ` · combo ×${simulMult}` : "";
+    const lineTxt = lineClear ? ` · line clear!` : "";
+    lastEl.textContent = (step > 1 ? `+${gained} · chain ×${step}` : `+${gained}`) + comboTxt + lineTxt;
 
     // Matched tiles drop off the bottom of the board
     const drops = [];
