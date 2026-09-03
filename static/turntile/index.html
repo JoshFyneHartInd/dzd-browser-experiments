@@ -186,8 +186,8 @@
   <div id="stage">
     <div id="boardwrap">
       <canvas id="c" aria-label="Game board"></canvas>
-      <button class="rotate" id="rotr" type="button" aria-label="Rotate board right" title="Rotate right (E)">↻</button>
-      <button class="rotate" id="rotl" type="button" aria-label="Rotate board left" title="Rotate left (Q)">↺</button>
+      <button class="rotate" id="rotr" type="button" aria-label="Rotate board right" title="Rotate right (Q)">↻</button>
+      <button class="rotate" id="rotl" type="button" aria-label="Rotate board left" title="Rotate left (E)">↺</button>
     </div>
     <div id="under">
       <div class="score">
@@ -566,8 +566,8 @@ rotl.addEventListener("click", () => rotate(-1));
 rotr.addEventListener("click", () => rotate(1));
 addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;
-  if (e.key === "q" || e.key === "Q" || e.key === "ArrowLeft") rotate(-1);
-  if (e.key === "e" || e.key === "E" || e.key === "ArrowRight") rotate(1);
+  if (e.key === "q" || e.key === "Q" || e.key === "ArrowLeft") rotate(1);
+  if (e.key === "e" || e.key === "E" || e.key === "ArrowRight") rotate(-1);
 });
 
 // ---------- Pointer input ----------
