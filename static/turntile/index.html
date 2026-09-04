@@ -359,15 +359,21 @@ function makeTile(type, r, c, spec = null) {
 function killTile(tile) { boardGroup.remove(tile.mesh); tile.mesh.material.dispose(); }
 
 // Spawns a regular tile, except every SPECIAL_EVERY-th spawn (counted across
-// the whole game) is a special tile instead.
+// the whole game) is a special tile instead — but only if no special tile is
+// currently on the board, and only when allowSpecial is true.
 let spawnCounter = 0;
-function spawnTile(r, c) {
+function spawnTile(r, c, allowSpecial = true) {
   spawnCounter++;
-  if (spawnCounter % SPECIAL_EVERY === 0) {
+  if (allowSpecial && spawnCounter >= SPECIAL_EVERY && !hasSpecialOnBoard()) {
+    spawnCounter = 0;
     const spec = SPEC_IDS[Math.floor(rng() * SPEC_IDS.length)];
     return makeTile(0, r, c, spec);
   }
   return makeTile(Math.floor(rng() * TYPES), r, c);
+}
+function hasSpecialOnBoard() {
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (grid[r][c] && grid[r][c].spec) return true;
+  return false;
 }
 
 // ---------- Game state ----------
@@ -564,7 +570,7 @@ function dropTiles(cells) {
 }
 
 // Gravity: compact each column, spawn new tiles above (deterministic order)
-async function refillColumns() {
+async function refillColumns(allowSpecial = true) {
   const falls = [];
   for (let c = 0; c < N; c++) {
     const col = [];
@@ -575,7 +581,7 @@ async function refillColumns() {
     for (const t of col) { grid[r][c] = t; r--; }
     for (let k = 0; k < missing; k++) {
       const row = missing - 1 - k;                // fill from bottom of gap upward
-      const t = spawnTile(-1 - k, c);
+      const t = spawnTile(-1 - k, c, allowSpecial);
       t.mesh.material.opacity = 0;
       tween(t.mesh.material, { opacity: 1 }, 0.2);
       grid[row][c] = t;
@@ -597,7 +603,7 @@ async function triggerBomb() {
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) allCells.push([r, c]);
   lastEl.textContent = "💣 boom!";
   await dropTiles(allCells);
-  await refillColumns();
+  await refillColumns(false);
 }
 const SPECIAL_EFFECTS = { bomb: triggerBomb };
 
