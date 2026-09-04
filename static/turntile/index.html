@@ -501,6 +501,7 @@ function startGame(s) {
   $("menu").hidden = true; $("over").hidden = true;
   boardGroup.rotation.z = 0;
   clearSel();
+  gtag("event", "level_start", { level_name: seed });
   setState("idle");
 }
 
@@ -649,6 +650,7 @@ async function triggerBomb() {
   lastEl.textContent = "💣 boom!";
   await dropTiles(allCells);
   await refillColumns(false);
+  gtag("event", "special_used", { type: "bomb" });
   await resolve();
 }
 
@@ -661,6 +663,7 @@ async function triggerRow(r) {
   lastEl.textContent = `+${pts} · row clear!`;
   await dropTiles(cells);
   await refillColumns();
+  gtag("event", "special_used", { type: "row" });
   await resolve();
 }
 async function triggerColumn(r, c) {
@@ -670,6 +673,7 @@ async function triggerColumn(r, c) {
   lastEl.textContent = `+${pts} · column clear!`;
   await dropTiles(cells);
   await refillColumns();
+  gtag("event", "special_used", { type: "column" });
   await resolve();
 }
 // Shuffle: once the board settles, replaces itself with a random regular
@@ -702,6 +706,7 @@ async function triggerShuffle(r, c) {
     moves.push(tween(t.mesh.position, { x: p.x, y: p.y }, 0.35, ease.inOutCubic));
   }
   await Promise.all(moves);
+  gtag("event", "special_used", { type: "shuffle" });
   await resolve();
 }
 // Random: once the board settles, clears itself plus a random half of the
@@ -721,11 +726,14 @@ async function triggerRandom(r, c) {
   chosen.push([r, c]); // the random tile itself
   await dropTiles(chosen);
   await refillColumns(false);
+  gtag("event", "special_used", { type: "random" });
   await resolve();
 }
 const SPECIAL_EFFECTS = { bomb: triggerBomb, row: triggerRow, column: triggerColumn, shuffle: triggerShuffle, random: triggerRandom };
 
 function gameOver() {
+  gtag("event", "level_end", { level_name: seed});
+  gtag("event", "post_score", { level: seed, score: score });
   setState("over");
   shownScore = score; scoreEl.textContent = score;
   $("o-score").textContent = score;
@@ -752,6 +760,7 @@ async function rotate(dir) { // dir: +1 = right/clockwise, -1 = left/countercloc
   }
   wm.style.transition = "none"; wm.style.transform = "none";
   requestAnimationFrame(() => { wm.style.transition = ""; });
+  gtag("event", "rotate", { direction: dir > 0 ? "right" : "left" });
   setState("idle");
 }
 rotl.addEventListener("click", () => rotate(-1));
