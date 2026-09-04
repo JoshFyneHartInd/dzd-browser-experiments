@@ -235,8 +235,8 @@
 (() => {
 "use strict";
 const TILES = ["tiles/01-red_half.png", "tiles/02-green_half.png", "tiles/03-blue_half.png", "tiles/04-yellow_half.png", "tiles/05-orange_half.png", "tiles/06-pink_half.png"];
-const SPECTILES = ["tiles/special_bomb_half.png", "tiles/special_row_half.png", "tiles/special_column_half.png", "tiles/special_shuffle_half.png"];
-const SPEC_IDS = ["bomb", "row", "column", "shuffle"]; // parallel to SPECTILES: maps each special texture to an id used in game logic
+const SPECTILES = ["tiles/special_bomb_half.png", "tiles/special_row_half.png", "tiles/special_column_half.png", "tiles/special_shuffle_half.png", "tiles/special_random_half.png"];
+const SPEC_IDS = ["bomb", "row", "column", "shuffle", "random"]; // parallel to SPECTILES: maps each special texture to an id used in game logic
 const SPECIAL_EVERY = 20;  // a special tile spawns after every N regular tiles
 const N = 8, TYPES = 6, HALF = 4.4, TILE_SIZE = 0.94;
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -674,7 +674,26 @@ async function triggerShuffle(r, c) {
   await Promise.all(moves);
   await resolve();
 }
-const SPECIAL_EFFECTS = { bomb: triggerBomb, row: triggerRow, column: triggerColumn, shuffle: triggerShuffle };
+// Random: once the board settles, clears itself plus a random half of the
+// normal tiles currently on the board, then refills and chain-reacts.
+async function triggerRandom(r, c) {
+  lastEl.textContent = "🎲 random clear!";
+  const normalCells = [];
+  for (let rr = 0; rr < N; rr++) for (let cc = 0; cc < N; cc++) {
+    const t = grid[rr][cc];
+    if (t && !t.spec) normalCells.push([rr, cc]);
+  }
+  for (let i = normalCells.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [normalCells[i], normalCells[j]] = [normalCells[j], normalCells[i]];
+  }
+  const chosen = normalCells.slice(0, Math.floor(normalCells.length / 2));
+  chosen.push([r, c]); // the random tile itself
+  await dropTiles(chosen);
+  await refillColumns();
+  await resolve();
+}
+const SPECIAL_EFFECTS = { bomb: triggerBomb, row: triggerRow, column: triggerColumn, shuffle: triggerShuffle, random: triggerRandom };
 
 function gameOver() {
   setState("over");
