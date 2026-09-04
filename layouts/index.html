@@ -34,7 +34,7 @@
       <footer>
         <span>
           {{ with .GitInfo }}
-            Build: {{ .Hash }}
+            Build: {{ .AbbreviatedHash }}
           {{ else }}
             Build: unavailable
           {{ end }}

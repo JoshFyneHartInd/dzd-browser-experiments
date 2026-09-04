@@ -237,7 +237,7 @@
 const TILES = ["tiles/01-red_half.png", "tiles/02-green_half.png", "tiles/03-blue_half.png", "tiles/04-yellow_half.png", "tiles/05-orange_half.png", "tiles/06-pink_half.png"];
 const SPECTILES = ["tiles/special_bomb_half.png", "tiles/special_row_half.png", "tiles/special_column_half.png", "tiles/special_shuffle_half.png", "tiles/special_random_half.png"];
 const SPEC_IDS = ["bomb", "row", "column", "shuffle", "random"]; // parallel to SPECTILES: maps each special texture to an id used in game logic
-const SPECIAL_EVERY = 20;  // a special tile spawns after every N regular tiles
+const SPECIAL_EVERY = 35;  // a special tile spawns after every N regular tiles
 const N = 8, TYPES = 6, HALF = 4.4, TILE_SIZE = 0.94;
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const T = REDUCED ? 0.25 : 1; // global animation time scale
@@ -363,7 +363,7 @@ function killTile(tile) { boardGroup.remove(tile.mesh); tile.mesh.material.dispo
 // currently on the board, and only when allowSpecial is true.
 let spawnCounter = 0;
 function spawnTile(r, c, allowSpecial = true) {
-  spawnCounter++;
+  if (allowSpecial && !hasSpecialOnBoard()) { spawnCounter++; }
   if (allowSpecial && spawnCounter >= SPECIAL_EVERY && !hasSpecialOnBoard()) {
     spawnCounter = 0;
     const spec = SPEC_IDS[Math.floor(rng() * SPEC_IDS.length)];
