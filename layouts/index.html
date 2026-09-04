@@ -32,13 +32,11 @@
       </main>
 
       <footer>
-        <span>DangerZoneDad's Browser Experiments</span>
-        <span aria-hidden="true">*</span>
         <span>
           {{ with .GitInfo }}
-            Commit: {{ .AbbreviatedHash }}
+            Build: {{ .AbbreviatedHash }}
           {{ else }}
-            Commit: unavailable
+            Build: unavailable
           {{ end }}
         </span>
       </footer>
