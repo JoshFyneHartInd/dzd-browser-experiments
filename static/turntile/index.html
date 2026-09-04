@@ -604,6 +604,7 @@ async function triggerBomb() {
   lastEl.textContent = "💣 boom!";
   await dropTiles(allCells);
   await refillColumns(false);
+  await resolve();
 }
 const SPECIAL_EFFECTS = { bomb: triggerBomb };
 
