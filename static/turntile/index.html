@@ -235,6 +235,9 @@
 (() => {
 "use strict";
 const TILES = ["tiles/01-red_half.png", "tiles/02-green_half.png", "tiles/03-blue_half.png", "tiles/04-yellow_half.png", "tiles/05-orange_half.png", "tiles/06-pink_half.png"];
+const SPECTILES = ["tiles/special_bomb_half.png"];
+const SPEC_IDS = ["bomb"]; // parallel to SPECTILES: maps each special texture to an id used in game logic
+const SPECIAL_EVERY = 20;  // a special tile spawns after every N regular tiles
 const N = 8, TYPES = 6, HALF = 4.4, TILE_SIZE = 0.94;
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const T = REDUCED ? 0.25 : 1; // global animation time scale
@@ -313,6 +316,13 @@ const textures = TILES.map(src => {
   tx.anisotropy = 4;
   return tx;
 });
+const specTextures = SPECTILES.map(src => {
+  const tx = loader.load(src);
+  tx.encoding = THREE.sRGBEncoding;
+  tx.minFilter = THREE.LinearMipmapLinearFilter;
+  tx.anisotropy = 4;
+  return tx;
+});
 const tileGeo = new THREE.PlaneGeometry(TILE_SIZE, TILE_SIZE);
 
 // Selection ring texture (rounded outline drawn once)
@@ -338,14 +348,27 @@ function readAccent() {
 
 function px(r, c) { return { x: c - (N-1)/2, y: (N-1)/2 - r }; }
 
-function makeTile(type, r, c) {
-  const mat = new THREE.MeshBasicMaterial({ map: textures[type], transparent: true });
+function makeTile(type, r, c, spec = null) {
+  const tex = spec ? specTextures[SPEC_IDS.indexOf(spec)] : textures[type];
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
   const mesh = new THREE.Mesh(tileGeo, mat);
   const p = px(r, c); mesh.position.set(p.x, p.y, 0);
   boardGroup.add(mesh);
-  return { t: type, mesh };
+  return { t: type, spec, mesh };
 }
 function killTile(tile) { boardGroup.remove(tile.mesh); tile.mesh.material.dispose(); }
+
+// Spawns a regular tile, except every SPECIAL_EVERY-th spawn (counted across
+// the whole game) is a special tile instead.
+let spawnCounter = 0;
+function spawnTile(r, c) {
+  spawnCounter++;
+  if (spawnCounter % SPECIAL_EVERY === 0) {
+    const spec = SPEC_IDS[Math.floor(rng() * SPEC_IDS.length)];
+    return makeTile(0, r, c, spec);
+  }
+  return makeTile(Math.floor(rng() * TYPES), r, c);
+}
 
 // ---------- Game state ----------
 let grid = [], rng = null, seed = "", state = "menu";
@@ -364,6 +387,10 @@ function setState(s) {
 
 function inb(r, c) { return r >= 0 && r < N && c >= 0 && c < N; }
 
+// Special tiles don't take part in ordinary color matching — they only
+// activate when swapped.
+const matchable = (a, b) => a && b && !a.spec && !b.spec && a.t === b.t;
+
 // Find all horizontal/vertical runs of 3+ same type
 function findRuns(g) {
   const runs = [];
@@ -371,8 +398,8 @@ function findRuns(g) {
     let c = 0;
     while (c < N) {
       let e = c;
-      while (e + 1 < N && g[r][e+1] && g[r][c] && g[r][e+1].t === g[r][c].t) e++;
-      if (g[r][c] && e - c + 1 >= 3) runs.push(Array.from({length: e-c+1}, (_, i) => [r, c+i]));
+      while (e + 1 < N && matchable(g[r][e+1], g[r][c])) e++;
+      if (g[r][c] && !g[r][c].spec && e - c + 1 >= 3) runs.push(Array.from({length: e-c+1}, (_, i) => [r, c+i]));
       c = e + 1;
     }
   }
@@ -380,8 +407,8 @@ function findRuns(g) {
     let r = 0;
     while (r < N) {
       let e = r;
-      while (e + 1 < N && g[e+1][c] && g[r][c] && g[e+1][c].t === g[r][c].t) e++;
-      if (g[r][c] && e - r + 1 >= 3) runs.push(Array.from({length: e-r+1}, (_, i) => [r+i, c]));
+      while (e + 1 < N && matchable(g[e+1][c], g[r][c])) e++;
+      if (g[r][c] && !g[r][c].spec && e - r + 1 >= 3) runs.push(Array.from({length: e-r+1}, (_, i) => [r+i, c]));
       r = e + 1;
     }
   }
@@ -429,6 +456,7 @@ function clearBoard() {
 function startGame(s) {
   seed = (s || "").trim() || randomSeed();
   rng = mulberry32(hashStr(seed));
+  spawnCounter = 0;
   clearBoard();
   const g = genBoard();
   grid = g.map((row, r) => row.map((cell, c) => makeTile(cell.t, r, c)));
@@ -457,6 +485,7 @@ async function doSwap(a, b) {
   clearSel();
   setState("busy");
   const A = grid[a.r][a.c], B = grid[b.r][b.c];
+  const specs = new Set([A.spec, B.spec].filter(Boolean));
   const pa = px(a.r, a.c), pb = px(b.r, b.c);
   A.mesh.position.z = 0.01;
   await Promise.all([tween(A.mesh.position, { x: pb.x, y: pb.y }, 0.22, ease.inOutCubic),
@@ -472,6 +501,9 @@ async function doSwap(a, b) {
     return;
   }
   await resolve();
+  // A special tile involved in the swap fires its effect once the match cascade settles.
+  for (const s of specs) if (SPECIAL_EFFECTS[s]) await SPECIAL_EFFECTS[s]();
+  if (!hasValidMove(grid)) gameOver(); else setState("idle");
 }
 
 async function resolve() {
@@ -508,45 +540,66 @@ async function resolve() {
     lastEl.textContent = (step > 1 ? `+${gained} · chain ×${step}` : `+${gained}`) + comboTxt + lineTxt;
 
     // Matched tiles drop off the bottom of the board
-    const drops = [];
-    for (const [r, c] of cells.values()) {
-      const t = grid[r][c]; grid[r][c] = null;
-      t.mesh.position.z = -0.01;
-      drops.push(Promise.all([
-        tween(t.mesh.position, { y: t.mesh.position.y - 3.2 }, 0.42, ease.inQuad),
-        tween(t.mesh.material, { opacity: 0 }, 0.38, ease.inQuad),
-        tween(t.mesh.scale, { x: 0.7, y: 0.7 }, 0.42, ease.inQuad)
-      ]).then(() => killTile(t)));
-    }
-    await Promise.all(drops);
-
-    // Gravity: compact each column, spawn new tiles above (deterministic order)
-    const falls = [];
-    for (let c = 0; c < N; c++) {
-      const col = [];
-      for (let r = N-1; r >= 0; r--) if (grid[r][c]) col.push(grid[r][c]);
-      const missing = N - col.length;
-      for (let r = 0; r < N; r++) grid[r][c] = null;
-      let r = N - 1;
-      for (const t of col) { grid[r][c] = t; r--; }
-      for (let k = 0; k < missing; k++) {
-        const row = missing - 1 - k;                // fill from bottom of gap upward
-        const t = makeTile(Math.floor(rng() * TYPES), -1 - k, c);
-        t.mesh.material.opacity = 0;
-        tween(t.mesh.material, { opacity: 1 }, 0.2);
-        grid[row][c] = t;
-      }
-      for (let rr = 0; rr < N; rr++) {
-        const t = grid[rr][c], p = px(rr, c);
-        const dist = Math.abs(t.mesh.position.y - p.y);
-        if (dist > 0.001) falls.push(tween(t.mesh.position, { y: p.y }, 0.22 + 0.06 * dist, ease.outCubic));
-      }
-    }
-    await Promise.all(falls);
+    await dropTiles(cells.values());
+    await refillColumns();
     step++;
   }
-  if (!hasValidMove(grid)) gameOver(); else setState("idle");
 }
+
+// Animates the tiles at the given [r, c] cells dropping off the board and
+// clears them from the grid. Shared by normal matches and special effects.
+function dropTiles(cells) {
+  const drops = [];
+  for (const [r, c] of cells) {
+    const t = grid[r][c]; if (!t) continue;
+    grid[r][c] = null;
+    t.mesh.position.z = -0.01;
+    drops.push(Promise.all([
+      tween(t.mesh.position, { y: t.mesh.position.y - 3.2 }, 0.42, ease.inQuad),
+      tween(t.mesh.material, { opacity: 0 }, 0.38, ease.inQuad),
+      tween(t.mesh.scale, { x: 0.7, y: 0.7 }, 0.42, ease.inQuad)
+    ]).then(() => killTile(t)));
+  }
+  return Promise.all(drops);
+}
+
+// Gravity: compact each column, spawn new tiles above (deterministic order)
+async function refillColumns() {
+  const falls = [];
+  for (let c = 0; c < N; c++) {
+    const col = [];
+    for (let r = N-1; r >= 0; r--) if (grid[r][c]) col.push(grid[r][c]);
+    const missing = N - col.length;
+    for (let r = 0; r < N; r++) grid[r][c] = null;
+    let r = N - 1;
+    for (const t of col) { grid[r][c] = t; r--; }
+    for (let k = 0; k < missing; k++) {
+      const row = missing - 1 - k;                // fill from bottom of gap upward
+      const t = spawnTile(-1 - k, c);
+      t.mesh.material.opacity = 0;
+      tween(t.mesh.material, { opacity: 1 }, 0.2);
+      grid[row][c] = t;
+    }
+    for (let rr = 0; rr < N; rr++) {
+      const t = grid[rr][c], p = px(rr, c);
+      const dist = Math.abs(t.mesh.position.y - p.y);
+      if (dist > 0.001) falls.push(tween(t.mesh.position, { y: p.y }, 0.22 + 0.06 * dist, ease.outCubic));
+    }
+  }
+  await Promise.all(falls);
+}
+
+// ---------- Special tile effects ----------
+// Bomb: once the board settles, every tile drops off, and the board
+// resettles as usual.
+async function triggerBomb() {
+  const allCells = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) allCells.push([r, c]);
+  lastEl.textContent = "💣 boom!";
+  await dropTiles(allCells);
+  await refillColumns();
+}
+const SPECIAL_EFFECTS = { bomb: triggerBomb };
 
 function gameOver() {
   setState("over");
