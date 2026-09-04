@@ -235,8 +235,8 @@
 (() => {
 "use strict";
 const TILES = ["tiles/01-red_half.png", "tiles/02-green_half.png", "tiles/03-blue_half.png", "tiles/04-yellow_half.png", "tiles/05-orange_half.png", "tiles/06-pink_half.png"];
-const SPECTILES = ["tiles/special_bomb_half.png"];
-const SPEC_IDS = ["bomb"]; // parallel to SPECTILES: maps each special texture to an id used in game logic
+const SPECTILES = ["tiles/special_bomb_half.png", "tiles/special_row_half.png", "tiles/special_column_half.png"];
+const SPEC_IDS = ["bomb", "row", "column"]; // parallel to SPECTILES: maps each special texture to an id used in game logic
 const SPECIAL_EVERY = 20;  // a special tile spawns after every N regular tiles
 const N = 8, TYPES = 6, HALF = 4.4, TILE_SIZE = 0.94;
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -491,7 +491,7 @@ async function doSwap(a, b) {
   clearSel();
   setState("busy");
   const A = grid[a.r][a.c], B = grid[b.r][b.c];
-  const specs = new Set([A.spec, B.spec].filter(Boolean));
+  const specialTiles = [A, B].filter(t => t.spec);
   const pa = px(a.r, a.c), pb = px(b.r, b.c);
   A.mesh.position.z = 0.01;
   await Promise.all([tween(A.mesh.position, { x: pb.x, y: pb.y }, 0.22, ease.inOutCubic),
@@ -507,9 +507,18 @@ async function doSwap(a, b) {
     return;
   }
   await resolve();
-  // A special tile involved in the swap fires its effect once the match cascade settles.
-  for (const s of specs) if (SPECIAL_EFFECTS[s]) await SPECIAL_EFFECTS[s]();
+  // A special tile involved in the swap fires its effect (wherever gravity
+  // left it) once the match cascade settles.
+  for (const tile of specialTiles) {
+    const pos = findTile(tile);
+    if (pos && SPECIAL_EFFECTS[tile.spec]) await SPECIAL_EFFECTS[tile.spec](pos.r, pos.c);
+  }
   if (!hasValidMove(grid)) gameOver(); else setState("idle");
+}
+
+function findTile(tile) {
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (grid[r][c] === tile) return { r, c };
+  return null;
 }
 
 async function resolve() {
@@ -537,7 +546,7 @@ async function resolve() {
         size = N;
         lineClear = true;
       }
-      const pts = Math.round(10 * size * (1 + 0.2 * (size - 3) + 0.2 * (step - 1)) * simulMult);
+      const pts = runPoints(size, step, simulMult);
       score += pts; gained += pts; biggest = Math.max(biggest, size);
       for (const [r, c] of runCells) cells.set(r*N + c, [r, c]);
     }
@@ -550,6 +559,12 @@ async function resolve() {
     await refillColumns();
     step++;
   }
+}
+
+// Points for a cleared run of the given size (matches resolve()'s formula),
+// reused by special tiles that clear a whole row/column outright.
+function runPoints(size, step, simulMult) {
+  return Math.round(10 * size * (1 + 0.2 * (size - 3) + 0.2 * (step - 1)) * simulMult);
 }
 
 // Animates the tiles at the given [r, c] cells dropping off the board and
@@ -606,7 +621,28 @@ async function triggerBomb() {
   await refillColumns(false);
   await resolve();
 }
-const SPECIAL_EFFECTS = { bomb: triggerBomb };
+
+// Row / Column: clears the row or column the tile ends up in, scoring it
+// the same as a natural 5-match line clear, then refills and chain-reacts.
+async function triggerRow(r) {
+  const cells = Array.from({length: N}, (_, c) => [r, c]);
+  const pts = runPoints(N, 1, 1);
+  score += pts;
+  lastEl.textContent = `+${pts} · row clear!`;
+  await dropTiles(cells);
+  await refillColumns();
+  await resolve();
+}
+async function triggerColumn(r, c) {
+  const cells = Array.from({length: N}, (_, rr) => [rr, c]);
+  const pts = runPoints(N, 1, 1);
+  score += pts;
+  lastEl.textContent = `+${pts} · column clear!`;
+  await dropTiles(cells);
+  await refillColumns();
+  await resolve();
+}
+const SPECIAL_EFFECTS = { bomb: triggerBomb, row: triggerRow, column: triggerColumn };
 
 function gameOver() {
   setState("over");
