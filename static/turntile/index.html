@@ -690,7 +690,7 @@ async function triggerRandom(r, c) {
   const chosen = normalCells.slice(0, Math.floor(normalCells.length / 2));
   chosen.push([r, c]); // the random tile itself
   await dropTiles(chosen);
-  await refillColumns();
+  await refillColumns(false);
   await resolve();
 }
 const SPECIAL_EFFECTS = { bomb: triggerBomb, row: triggerRow, column: triggerColumn, shuffle: triggerShuffle, random: triggerRandom };
