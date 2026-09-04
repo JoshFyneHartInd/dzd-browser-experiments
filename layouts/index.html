@@ -34,7 +34,13 @@
       <footer>
         <span>DangerZoneDad's Browser Experiments</span>
         <span aria-hidden="true">*</span>
-        <span>Last updated: {{ now.Format "January 2, 2006" }}</span>
+        <span>
+          {{ with .GitInfo }}
+            Commit: {{ .AbbreviatedHash }}
+          {{ else }}
+            Commit: unavailable
+          {{ end }}
+        </span>
       </footer>
     </div>
   </body>

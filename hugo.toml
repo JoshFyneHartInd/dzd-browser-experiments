@@ -1,6 +1,7 @@
 baseURL = 'https://experiments.dangerzonedad.com/'
 languageCode = 'en-us'
 title = 'Experiments | DangerZoneDad'
+enableGitInfo = true
 
 [params]
 	description = 'A collection of browser experiments created with GenAI'
