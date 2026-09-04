@@ -235,8 +235,8 @@
 (() => {
 "use strict";
 const TILES = ["tiles/01-red_half.png", "tiles/02-green_half.png", "tiles/03-blue_half.png", "tiles/04-yellow_half.png", "tiles/05-orange_half.png", "tiles/06-pink_half.png"];
-const SPECTILES = ["tiles/special_bomb_half.png", "tiles/special_row_half.png", "tiles/special_column_half.png"];
-const SPEC_IDS = ["bomb", "row", "column"]; // parallel to SPECTILES: maps each special texture to an id used in game logic
+const SPECTILES = ["tiles/special_bomb_half.png", "tiles/special_row_half.png", "tiles/special_column_half.png", "tiles/special_shuffle_half.png"];
+const SPEC_IDS = ["bomb", "row", "column", "shuffle"]; // parallel to SPECTILES: maps each special texture to an id used in game logic
 const SPECIAL_EVERY = 20;  // a special tile spawns after every N regular tiles
 const N = 8, TYPES = 6, HALF = 4.4, TILE_SIZE = 0.94;
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -642,7 +642,39 @@ async function triggerColumn(r, c) {
   await refillColumns();
   await resolve();
 }
-const SPECIAL_EFFECTS = { bomb: triggerBomb, row: triggerRow, column: triggerColumn };
+// Shuffle: once the board settles, replaces itself with a random regular
+// tile, then scrambles the positions of every tile on the board (itself
+// included), before the board resolves as usual.
+async function triggerShuffle(r, c) {
+  lastEl.textContent = "🔀 shuffle!";
+  const self = grid[r][c];
+  const newType = Math.floor(rng() * TYPES);
+  self.spec = null;
+  self.t = newType;
+  self.mesh.material.map = textures[newType];
+  self.mesh.material.needsUpdate = true;
+
+  const cells = [], tiles = [];
+  for (let rr = 0; rr < N; rr++) for (let cc = 0; cc < N; cc++) {
+    cells.push([rr, cc]);
+    tiles.push(grid[rr][cc]);
+  }
+  for (let i = tiles.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+  }
+  const moves = [];
+  for (let i = 0; i < cells.length; i++) {
+    const [rr, cc] = cells[i];
+    const t = tiles[i];
+    grid[rr][cc] = t;
+    const p = px(rr, cc);
+    moves.push(tween(t.mesh.position, { x: p.x, y: p.y }, 0.35, ease.inOutCubic));
+  }
+  await Promise.all(moves);
+  await resolve();
+}
+const SPECIAL_EFFECTS = { bomb: triggerBomb, row: triggerRow, column: triggerColumn, shuffle: triggerShuffle };
 
 function gameOver() {
   setState("over");
