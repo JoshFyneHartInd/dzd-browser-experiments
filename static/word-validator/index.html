@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Word Validator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <div class="theme-row">
+    <label for="themeSelect" class="visually-hidden">Theme</label>
+    <select id="themeSelect">
+      <option value="dark">Dark</option>
+      <option value="light">Light</option>
+      <option value="system">System</option>
+      <option value="sepia">Sepia</option>
+      <option value="solarized-light">Solarized Light</option>
+      <option value="solarized-dark">Solarized Dark</option>
+      <option value="dracula">Dracula</option>
+      <option value="nord">Nord</option>
+      <option value="high-contrast">High Contrast</option>
+    </select>
+  </div>
+
+  <h1>Is it an English word?</h1>
+  <p class="sub">Type letters, press check.</p>
+
+  <form id="checkForm" autocomplete="off">
+    <input
+      id="wordInput"
+      type="text"
+      placeholder="e.g. quixotic"
+      inputmode="text"
+      autocapitalize="off"
+      spellcheck="false"
+      disabled
+    >
+    <button id="checkBtn" type="submit" disabled>Check</button>
+  </form>
+
+  <div id="result" aria-live="polite"></div>
+  <div id="status">Loading word list…</div>
+</main>
+
+<script src="script.js" defer></script>
+</body>
+</html>
