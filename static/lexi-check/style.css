@@ -6,6 +6,7 @@
   --bad: #e08469;
   --muted: #8f8c84;
   --field-bg: #201f1c;
+  --accent: var(--ink);
 }
 
 :root[data-theme="light"] {
@@ -66,6 +67,112 @@
   --bad: #bf616a;
   --muted: #81a1c1;
   --field-bg: #3b4252;
+}
+
+:root[data-theme="github-light"] {
+  --ink: #24292f;
+  --paper: #ffffff;
+  --line: #d0d7de;
+  --good: #1a7f37;
+  --bad: #cf222e;
+  --muted: #57606a;
+  --field-bg: #f6f8fa;
+}
+
+:root[data-theme="github-dark"] {
+  --ink: #c9d1d9;
+  --paper: #0d1117;
+  --line: #30363d;
+  --good: #3fb950;
+  --bad: #f85149;
+  --muted: #8b949e;
+  --field-bg: #161b22;
+}
+
+:root[data-theme="monokai"] {
+  --ink: #f8f8f2;
+  --paper: #272822;
+  --line: #49483e;
+  --good: #a6e22e;
+  --bad: #f92672;
+  --muted: #a6a69c;
+  --field-bg: #3e3d32;
+}
+
+:root[data-theme="one-dark"] {
+  --ink: #abb2bf;
+  --paper: #282c34;
+  --line: #3e4451;
+  --good: #98c379;
+  --bad: #e06c75;
+  --muted: #7f848e;
+  --field-bg: #21252b;
+}
+
+:root[data-theme="ocean"] {
+  --ink: #d9f3f0;
+  --paper: #073642;
+  --line: #176b75;
+  --good: #a8e6cf;
+  --bad: #ff8b8b;
+  --muted: #83b8bd;
+  --field-bg: #0b4652;
+  --accent: #5eead4;
+}
+
+:root[data-theme="forest"] {
+  --ink: #e6f1d8;
+  --paper: #17261b;
+  --line: #36533b;
+  --good: #b9e769;
+  --bad: #f29b9b;
+  --muted: #98ae91;
+  --field-bg: #223a28;
+  --accent: #d6f36b;
+}
+
+:root[data-theme="sunset"] {
+  --ink: #fff0dc;
+  --paper: #3a1832;
+  --line: #71324e;
+  --good: #ffd166;
+  --bad: #ff8c82;
+  --muted: #d6a6a1;
+  --field-bg: #51213b;
+  --accent: #ffad69;
+}
+
+:root[data-theme="candy"] {
+  --ink: #43264f;
+  --paper: #ffe5f1;
+  --line: #e9a8ca;
+  --good: #168f78;
+  --bad: #d94770;
+  --muted: #956a8e;
+  --field-bg: #ffd1e5;
+  --accent: #c43d82;
+}
+
+:root[data-theme="synthwave"] {
+  --ink: #f5e9ff;
+  --paper: #17102d;
+  --line: #593b86;
+  --good: #61f4de;
+  --bad: #ff6b9d;
+  --muted: #b9a5d6;
+  --field-bg: #25164a;
+  --accent: #ff7edb;
+}
+
+:root[data-theme="citrus"] {
+  --ink: #26351c;
+  --paper: #f1f5c9;
+  --line: #c7d66b;
+  --good: #397c3f;
+  --bad: #bd4e37;
+  --muted: #718047;
+  --field-bg: #e4ed9f;
+  --accent: #e07a20;
 }
 
 :root[data-theme="high-contrast"] {
@@ -148,6 +255,7 @@ h1 {
   font-weight: normal;
   margin: 0 0 4px;
   letter-spacing: 0.01em;
+  color: var(--accent);
 }
 
 h2 {
