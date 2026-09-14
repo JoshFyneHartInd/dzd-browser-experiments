@@ -9,9 +9,9 @@ url = '/turntile/'
 description = 'Match 3 with a twist'
 
 [[links]]
-title = 'English Word Validator'
-url = '/word-validator/'
-description = 'Validate English words'
+title = 'Lexi-Check'
+url = '/lexi-check/'
+description = 'Validate English words in real-time'
 
 [[links]]
 title = 'Cubemine'
