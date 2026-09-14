@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lexi-Check | An English Word Validator</title>
+<link rel="stylesheet" href="style.css">
+<meta property="og:title" content="Lexi-Check">
+<meta property="og:description" content="Validate English words in real-time.">
+<meta property="og:url" content="https://experiments.dangerzonedad.com/lexi-check/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Lexi-Check">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Lexi-Check">
+<meta name="twitter:description" content="Validate English words in real-time.">
+</head>
+<body>
+<main>
+  <h1>Lexi-Check</h1>
+  <h2>Is it an English word?</h2>
+  <p class="sub">Type letters, press check.</p>
+
+  <form id="checkForm" autocomplete="off">
+    <input
+      id="wordInput"
+      type="text"
+      placeholder="e.g. quixotic"
+      inputmode="text"
+      autocapitalize="off"
+      spellcheck="false"
+      disabled
+    >
+    <button id="checkBtn" type="submit" disabled>Check</button>
+  </form>
+
+  <div id="result" aria-live="polite"></div>
+  <div class="status-row">
+    <div id="status">Loading word list…</div>
+    <label for="themeSelect" class="visually-hidden">Theme</label>
+    <select id="themeSelect">
+      <option value="dark">Dark</option>
+      <option value="light">Light</option>
+      <option value="system">System</option>
+      <option value="sepia">Sepia</option>
+      <option value="solarized-light">Solarized Light</option>
+      <option value="solarized-dark">Solarized Dark</option>
+      <option value="dracula">Dracula</option>
+      <option value="nord">Nord</option>
+      <option value="high-contrast">High Contrast</option>
+    </select>
+  </div>
+</main>
+
+<script src="script.js" defer></script>
+</body>
+</html>
