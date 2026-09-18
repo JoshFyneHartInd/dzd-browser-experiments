@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lighten: optimize images for the web</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2310121b'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23ff8c42'/%3E%3C/svg%3E">
+
+<!-- Apply saved theme before paint -->
+<script>
+  (function () {
+    var t = 'dark';
+    try { t = localStorage.getItem('lighten.theme') || 'dark'; } catch (e) {}
+    var r = t === 'system' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : t;
+    document.documentElement.dataset.theme = r;
+  })();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  var c = function (n) { return 'rgb(var(--' + n + ') / <alpha-value>)'; };
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: c('bg'), surface: c('surface'), raised: c('raised'), line: c('line'),
+          ink: c('ink'), muted: c('muted'), accent: c('accent'), onaccent: c('onaccent'), warn: c('warn')
+        },
+        fontFamily: {
+          display: ['"Bricolage Grotesque"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          sans: ['"Instrument Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif']
+        }
+      }
+    }
+  };
+</script>
+
+<style>
+  /* Themes. Values are RGB triplets so Tailwind opacity modifiers work. */
+  :root, [data-theme="dark"] {           /* Darkroom: ink navy + safelight amber */
+    color-scheme: dark;
+    --bg: 16 18 27; --surface: 23 26 39; --raised: 33 37 55; --line: 50 55 79;
+    --ink: 233 231 224; --muted: 149 154 178; --accent: 255 140 66; --onaccent: 33 16 3; --warn: 255 122 122;
+  }
+  [data-theme="light"] {                 /* Daylight */
+    color-scheme: light;
+    --bg: 243 244 248; --surface: 255 255 255; --raised: 234 236 243; --line: 211 215 227;
+    --ink: 22 25 38; --muted: 93 98 121; --accent: 190 78 12; --onaccent: 255 255 255; --warn: 184 36 36;
+  }
+  [data-theme="cyanotype"] {             /* Prussian blue print */
+    color-scheme: dark;
+    --bg: 13 39 80; --surface: 19 51 100; --raised: 27 65 122; --line: 52 94 156;
+    --ink: 238 244 252; --muted: 164 189 222; --accent: 255 255 255; --onaccent: 13 39 80; --warn: 255 170 160;
+  }
+  [data-theme="sepia"] {
+    color-scheme: dark;
+    --bg: 41 32 23; --surface: 54 42 31; --raised: 70 55 41; --line: 97 79 59;
+    --ink: 241 227 205; --muted: 186 164 134; --accent: 226 170 94; --onaccent: 41 32 23; --warn: 255 140 120;
+  }
+  [data-theme="moss"] {
+    color-scheme: dark;
+    --bg: 19 28 23; --surface: 27 39 32; --raised: 37 53 43; --line: 57 80 65;
+    --ink: 227 236 227; --muted: 148 171 152; --accent: 176 212 132; --onaccent: 19 28 23; --warn: 255 140 130;
+  }
+
+  body { background: rgb(var(--bg)); }
+  input[type="range"] { accent-color: rgb(var(--accent)); }
+  :focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
+
+  /* Page layout: drop zone, settings, list. Settings sit beside the list on wide screens. */
+  .layout { display: grid; gap: 1.25rem; grid-template-areas: "drop" "settings" "list"; }
+  @media (min-width: 1024px) {
+    .layout { grid-template-columns: 19rem minmax(0, 1fr); grid-template-areas: "settings drop" "settings list"; grid-template-rows: auto 1fr; align-items: start; gap: 1.5rem 2rem; }
+  }
+  .area-drop { grid-area: drop; } .area-settings { grid-area: settings; } .area-list { grid-area: list; }
+
+  /* Transparency checkerboard */
+  .checker {
+    background-color: #fff;
+    background-image: conic-gradient(#d4d4d8 25%, transparent 0 50%, #d4d4d8 0 75%, transparent 0);
+    background-size: 16px 16px;
+  }
+
+  .spin { animation: spin 0.9s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } * { transition: none !important; } }
+
+  /* Compare slider: invisible range input drives the divider */
+  #cmpRange { -webkit-appearance: none; appearance: none; background: transparent; opacity: 0; cursor: ew-resize; }
+  #cmpRange:focus-visible + #cmpLine > span { outline: 2px solid rgb(var(--accent)); outline-offset: 3px; }
+  dialog::backdrop { background: rgb(0 0 0 / 0.72); }
+</style>
+</head>
+
+<body class="min-h-screen font-sans text-ink antialiased">
+
+<header class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 pt-6 sm:px-6">
+  <div class="flex items-center gap-3">
+    <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-raised" aria-hidden="true">
+      <span class="h-4 w-4 rounded-full bg-accent"></span>
+    </span>
+    <div>
+      <h1 class="font-display text-2xl font-bold leading-none tracking-tight">Lighten</h1>
+      <p class="mt-1 hidden text-sm text-muted sm:block">Smaller images for the web. Files never leave your browser.</p>
+    </div>
+  </div>
+
+  <label class="flex shrink-0 items-center gap-2 text-sm text-muted">
+    <i class="ri-palette-line text-lg" aria-hidden="true"></i>
+    <span class="sr-only">Theme</span>
+    <select id="theme" class="rounded-lg border border-line bg-surface py-2 pl-3 pr-8 text-sm text-ink">
+      <option value="dark">Darkroom</option>
+      <option value="light">Daylight</option>
+      <option value="system">Match system</option>
+      <option value="cyanotype">Cyanotype</option>
+      <option value="sepia">Sepia</option>
+      <option value="moss">Moss</option>
+    </select>
+  </label>
+</header>
+
+<main class="layout mx-auto max-w-6xl px-4 py-6 sm:px-6">
+
+  <!-- Drop zone -->
+  <section class="area-drop">
+    <label id="drop" for="file"
+      class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-surface px-6 py-12 text-center transition-colors hover:border-accent focus-within:border-accent">
+      <i class="ri-image-add-line text-4xl text-accent" aria-hidden="true"></i>
+      <span class="font-display text-xl font-bold">Drop images here</span>
+      <span class="text-sm text-muted">or click to choose files. You can also paste from the clipboard.</span>
+      <input id="file" type="file" accept="image/*" multiple class="sr-only">
+    </label>
+  </section>
+
+  <!-- Settings -->
+  <aside class="area-settings rounded-2xl bg-surface p-5 lg:sticky lg:top-6">
+    <h2 class="font-display text-lg font-bold">Output</h2>
+
+    <fieldset class="mt-4">
+      <legend class="text-sm font-medium">Format</legend>
+      <div class="mt-2 grid grid-cols-2 gap-1 rounded-lg bg-raised p-1">
+        <label class="cursor-pointer">
+          <input type="radio" name="format" value="webp" class="peer sr-only" checked>
+          <span class="block rounded-md py-2 text-center text-sm font-medium text-muted peer-checked:bg-accent peer-checked:text-onaccent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent peer-focus-visible:outline-offset-2">WebP</span>
+        </label>
+        <label class="cursor-pointer">
+          <input type="radio" name="format" value="png" class="peer sr-only">
+          <span class="block rounded-md py-2 text-center text-sm font-medium text-muted peer-checked:bg-accent peer-checked:text-onaccent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent peer-focus-visible:outline-offset-2">PNG</span>
+        </label>
+      </div>
+      <p id="formatHint" class="mt-2 text-sm text-muted"></p>
+    </fieldset>
+
+    <div class="mt-5">
+      <div class="flex items-baseline justify-between">
+        <label for="quality" class="text-sm font-medium">Quality</label>
+        <output id="qualityOut" for="quality" class="text-sm tabular-nums text-muted">80</output>
+      </div>
+      <input id="quality" type="range" min="10" max="100" step="1" value="80" class="mt-2 w-full">
+      <p id="qualityHint" class="mt-1 text-sm text-muted"></p>
+    </div>
+
+    <fieldset class="mt-5">
+      <legend class="text-sm font-medium">Resize to fit within</legend>
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        <label class="text-sm text-muted">Max width
+          <input id="maxW" type="number" min="1" inputmode="numeric" placeholder="No limit"
+            class="mt-1 w-full rounded-lg border border-line bg-bg px-3 py-2 text-ink placeholder:text-muted/70">
+        </label>
+        <label class="text-sm text-muted">Max height
+          <input id="maxH" type="number" min="1" inputmode="numeric" placeholder="No limit"
+            class="mt-1 w-full rounded-lg border border-line bg-bg px-3 py-2 text-ink placeholder:text-muted/70">
+        </label>
+      </div>
+      <div id="presets" class="mt-2 flex flex-wrap gap-1.5">
+        <button type="button" data-w="" class="rounded-full border border-line px-3 py-1 text-sm text-muted hover:border-accent hover:text-ink">Original</button>
+        <button type="button" data-w="2560" class="rounded-full border border-line px-3 py-1 text-sm text-muted hover:border-accent hover:text-ink">2560</button>
+        <button type="button" data-w="1920" class="rounded-full border border-line px-3 py-1 text-sm text-muted hover:border-accent hover:text-ink">1920</button>
+        <button type="button" data-w="1280" class="rounded-full border border-line px-3 py-1 text-sm text-muted hover:border-accent hover:text-ink">1280</button>
+        <button type="button" data-w="800" class="rounded-full border border-line px-3 py-1 text-sm text-muted hover:border-accent hover:text-ink">800</button>
+      </div>
+      <p class="mt-2 text-sm text-muted">Proportions are kept. Images are never enlarged.</p>
+    </fieldset>
+  </aside>
+
+  <!-- List -->
+  <section class="area-list" aria-label="Images">
+    <div id="empty" class="rounded-2xl border border-line px-6 py-10 text-center text-muted">
+      Nothing here yet. Add some images and they are optimized right away with the settings shown.
+    </div>
+
+    <div id="results" class="hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p id="summary" class="tabular-nums" aria-live="polite"></p>
+        <div class="flex gap-2">
+          <button id="clear" type="button" class="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm hover:border-accent">
+            <i class="ri-delete-bin-line" aria-hidden="true"></i>Remove all
+          </button>
+          <button id="zip" type="button" class="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-onaccent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
+            <i class="ri-file-zip-line" aria-hidden="true"></i><span id="zipLabel">Download all as ZIP</span>
+          </button>
+        </div>
+      </div>
+      <ul id="list" class="mt-3 overflow-hidden rounded-2xl bg-surface"></ul>
+    </div>
+  </section>
+</main>
+
+<!-- Before / after -->
+<dialog id="cmp" class="m-auto w-[min(96vw,1100px)] rounded-2xl bg-surface p-0 text-ink">
+  <div class="flex items-center justify-between gap-4 border-b border-line px-4 py-3">
+    <div class="min-w-0">
+      <p id="cmpName" class="truncate font-medium"></p>
+      <p id="cmpMeta" class="text-sm tabular-nums text-muted"></p>
+    </div>
+    <button id="cmpClose" type="button" class="grid h-9 w-9 shrink-0 place-items-center rounded-lg hover:bg-raised" aria-label="Close comparison">
+      <i class="ri-close-line text-xl" aria-hidden="true"></i>
+    </button>
+  </div>
+  <div class="bg-bg p-3 sm:p-4">
+    <div id="cmpStage" class="checker relative mx-auto select-none overflow-hidden rounded-lg">
+      <img id="cmpAfter" alt="Optimized image" class="absolute inset-0 h-full w-full" draggable="false">
+      <img id="cmpBefore" alt="Original image" class="absolute inset-0 h-full w-full" draggable="false">
+      <span class="absolute left-2 top-2 rounded bg-black/70 px-2 py-0.5 text-xs text-white">Original</span>
+      <span class="absolute right-2 top-2 rounded bg-black/70 px-2 py-0.5 text-xs text-white">Optimized</span>
+      <input id="cmpRange" type="range" min="0" max="100" step="0.1" value="50" aria-label="Drag to compare original and optimized"
+        class="absolute inset-0 z-10 m-0 h-full w-full">
+      <div id="cmpLine" class="pointer-events-none absolute inset-y-0 w-0.5 -translate-x-1/2 bg-white shadow-[0_0_0_1px_rgba(0,0,0,.4)]">
+        <span class="absolute left-1/2 top-1/2 grid h-9 w-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white text-black shadow">
+          <i class="ri-expand-left-right-line" aria-hidden="true"></i>
+        </span>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" role="status" class="pointer-events-none fixed inset-x-0 bottom-5 z-50 mx-auto hidden w-fit max-w-[90vw] rounded-lg bg-ink px-4 py-2 text-sm text-bg shadow-lg"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.11/pako.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+(() => {
+  'use strict';
+
+  const PAKO_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.11/pako.min.js';
+  const UPNG_URL = 'https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.js';
+
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('lighten.' + k); return v === null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('lighten.' + k, v); } catch {} }
+  };
+
+  /* ---------- Theme ---------- */
+  const themeSel = $('theme');
+  const sysLight = matchMedia('(prefers-color-scheme: light)');
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t === 'system' ? (sysLight.matches ? 'light' : 'dark') : t;
+  }
+  themeSel.value = store.get('theme', 'dark');
+  if (!themeSel.value) themeSel.value = 'dark';
+  applyTheme(themeSel.value);
+  themeSel.addEventListener('change', () => { store.set('theme', themeSel.value); applyTheme(themeSel.value); });
+  sysLight.addEventListener('change', () => { if (themeSel.value === 'system') applyTheme('system'); });
+
+  /* ---------- Settings ---------- */
+  const settings = {
+    format: store.get('format', 'webp') === 'png' ? 'png' : 'webp',
+    quality: Math.min(100, Math.max(10, parseInt(store.get('quality', '80'), 10) || 80)),
+    maxW: parseInt(store.get('maxW', ''), 10) || null,
+    maxH: parseInt(store.get('maxH', ''), 10) || null
+  };
+  const qualityEl = $('quality'), maxWEl = $('maxW'), maxHEl = $('maxH');
+  document.querySelector(`input[name="format"][value="${settings.format}"]`).checked = true;
+  qualityEl.value = settings.quality;
+  maxWEl.value = settings.maxW || '';
+  maxHEl.value = settings.maxH || '';
+
+  const pngColors = (q) => q >= 100 ? 0 : Math.max(8, Math.round(256 * q / 100));
+
+  function refreshHints() {
+    $('qualityOut').textContent = settings.quality;
+    if (settings.format === 'webp') {
+      $('formatHint').textContent = 'Best for photos and most web images. Keeps transparency.';
+      $('qualityHint').textContent = settings.quality >= 100 ? 'Lossless. Files will be large.' : '75 to 85 is a good range for photos.';
+    } else {
+      $('formatHint').textContent = 'Best for logos, icons and screenshots. Photos stay large as PNG.';
+      $('qualityHint').textContent = settings.quality >= 100
+        ? 'Lossless: all colors kept.'
+        : 'Reduced to about ' + pngColors(settings.quality) + ' colors.';
+    }
+  }
+
+  let debounce;
+  function settingsChanged() {
+    store.set('format', settings.format); store.set('quality', settings.quality);
+    store.set('maxW', settings.maxW || ''); store.set('maxH', settings.maxH || '');
+    refreshHints();
+    clearTimeout(debounce);
+    debounce = setTimeout(scheduleAll, 250);
+  }
+  document.querySelectorAll('input[name="format"]').forEach((r) =>
+    r.addEventListener('change', () => { settings.format = r.value; settingsChanged(); }));
+  qualityEl.addEventListener('input', () => { settings.quality = +qualityEl.value; settingsChanged(); });
+  const dim = (el) => { const n = Math.floor(+el.value); return n >= 1 ? n : null; };
+  maxWEl.addEventListener('input', () => { settings.maxW = dim(maxWEl); settingsChanged(); });
+  maxHEl.addEventListener('input', () => { settings.maxH = dim(maxHEl); settingsChanged(); });
+  $('presets').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    maxWEl.value = b.dataset.w; settings.maxW = dim(maxWEl);
+    if (!b.dataset.w) { maxHEl.value = ''; settings.maxH = null; }
+    settingsChanged();
+  });
+  refreshHints();
+
+  /* ---------- Helpers ---------- */
+  const esc = (s) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  function fmtBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB';
+    return (n / 1048576).toFixed(n < 10485760 ? 2 : 1) + ' MB';
+  }
+  function pctChange(before, after) {
+    const p = Math.round((1 - after / before) * 100);
+    return p >= 0 ? p + '% smaller' : Math.abs(p) + '% larger';
+  }
+  let toastTimer;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 4000);
+  }
+  function saveBlob(blob, name) {
+    const a = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
+  /* ---------- PNG encoder (worker, with fallbacks) ---------- */
+  let worker = null, workerDead = false, jobId = 0;
+  const jobs = new Map();
+  function getWorker() {
+    if (worker || workerDead) return worker;
+    try {
+      const src = `self.window = self; importScripts(${JSON.stringify(PAKO_URL)}, ${JSON.stringify(UPNG_URL)});
+        self.onmessage = (e) => { const d = e.data;
+          try { const out = UPNG.encode([d.buf], d.w, d.h, d.colors); self.postMessage({ id: d.id, out }, [out]); }
+          catch (err) { self.postMessage({ id: d.id, error: String(err) }); } };`;
+      worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      worker.onmessage = (e) => {
+        const j = jobs.get(e.data.id); if (!j) return; jobs.delete(e.data.id);
+        e.data.error ? j.reject(new Error(e.data.error)) : j.resolve(e.data.out);
+      };
+      worker.onerror = () => {
+        workerDead = true; worker = null;
+        jobs.forEach((j) => j.reject(new Error('worker failed'))); jobs.clear();
+      };
+    } catch { workerDead = true; worker = null; }
+    return worker;
+  }
+  function encodeInWorker(buf, w, h, colors) {
+    return new Promise((resolve, reject) => {
+      const wk = getWorker(); if (!wk) return reject(new Error('no worker'));
+      const id = ++jobId; jobs.set(id, { resolve, reject });
+      wk.postMessage({ id, buf, w, h, colors }, [buf]);
+    });
+  }
+  const canvasBlob = (canvas, type, q) => new Promise((res) => canvas.toBlob(res, type, q));
+
+  async function encodePng(canvas, ctx, colors) {
+    const w = canvas.width, h = canvas.height;
+    const pixels = () => ctx.getImageData(0, 0, w, h).data.buffer;
+    try {
+      return new Blob([await encodeInWorker(pixels(), w, h, colors)], { type: 'image/png' });
+    } catch {
+      if (window.UPNG && window.pako) {
+        await new Promise((r) => setTimeout(r, 30)); // let the UI paint before blocking
+        return new Blob([UPNG.encode([pixels()], w, h, colors)], { type: 'image/png' });
+      }
+      return canvasBlob(canvas, 'image/png'); // libraries unavailable (offline): plain lossless PNG
+    }
+  }
+
+  /* ---------- Decode + optimize ---------- */
+  async function decode(file, url) {
+    if (window.createImageBitmap && file.type !== 'image/svg+xml') {
+      try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch {}
+      try { return await createImageBitmap(file); } catch {}
+    }
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('This file could not be read as an image.'));
+      img.src = url;
+    });
+  }
+
+  async function optimize(it, s) {
+    if (!it.source) {
+      it.source = await decode(it.file, it.url);
+      it.w = it.source.naturalWidth || it.source.width;
+      it.h = it.source.naturalHeight || it.source.height;
+      if (!it.w || !it.h) { it.w = it.w || 1024; it.h = it.h || 1024; } // SVG without intrinsic size
+    }
+    const scale = Math.min(1, s.maxW ? s.maxW / it.w : 1, s.maxH ? s.maxH / it.h : 1);
+    const w = Math.max(1, Math.round(it.w * scale)), h = Math.max(1, Math.round(it.h * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: s.format === 'png' });
+    if (!ctx) throw new Error('Image is too large for this browser to process.');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(it.source, 0, 0, w, h);
+
+    let blob;
+    if (s.format === 'webp') {
+      blob = await canvasBlob(canvas, 'image/webp', s.quality / 100);
+      if (!blob) throw new Error('Image is too large for this browser to process.');
+      if (blob.type !== 'image/webp') throw new Error('This browser cannot save WebP. Switch to PNG or use Chrome, Edge or Firefox.');
+    } else {
+      blob = await encodePng(canvas, ctx, pngColors(s.quality));
+      if (!blob) throw new Error('Image is too large for this browser to process.');
+    }
+    canvas.width = canvas.height = 0; // release memory
+    return { blob, w, h, ext: s.format };
+  }
+
+  /* ---------- Queue ---------- */
+  const items = [];
+  let gen = 0, running = false, nextId = 1;
+
+  function scheduleAll() {
+    gen++;
+    items.forEach((it) => { if (it.status !== 'error' || it.source) { it.status = 'queued'; updateRow(it); } });
+    updateSummary(); pump();
+  }
+
+  async function pump() {
+    if (running) return; running = true;
+    for (;;) {
+      const it = items.find((i) => i.status === 'queued');
+      if (!it) break;
+      const g = gen, snap = { ...settings };
+      it.status = 'working'; updateRow(it);
+      try {
+        const out = await optimize(it, snap);
+        if (!items.includes(it)) continue;
+        if (g !== gen) { it.status = 'queued'; continue; }   // settings changed meanwhile: redo
+        if (it.outUrl) URL.revokeObjectURL(it.outUrl);
+        it.out = out; it.outUrl = URL.createObjectURL(out.blob); it.status = 'done';
+      } catch (err) {
+        if (!items.includes(it)) continue;
+        if (g !== gen && it.source) { it.status = 'queued'; continue; }
+        it.status = 'error'; it.error = err.message || 'Something went wrong with this image.'; it.out = null;
+      }
+      updateRow(it); updateSummary();
+    }
+    running = false; updateSummary();
+  }
+
+  function addFiles(fileList) {
+    const files = [...fileList];
+    const images = files.filter((f) => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|avif|svg)$/i.test(f.name));
+    if (files.length && !images.length) { toast('Those files are not images.'); return; }
+    if (images.length < files.length) toast((files.length - images.length) + ' files skipped because they are not images.');
+    images.forEach((file) => {
+      const it = { id: nextId++, file, url: URL.createObjectURL(file), status: 'queued', source: null, out: null, outUrl: null };
+      items.push(it); $('list').appendChild(buildRow(it)); updateRow(it);
+    });
+    updateSummary(); pump();
+  }
+
+  function removeItem(it) {
+    const i = items.indexOf(it); if (i < 0) return;
+    items.splice(i, 1);
+    URL.revokeObjectURL(it.url); if (it.outUrl) URL.revokeObjectURL(it.outUrl);
+    if (it.source && it.source.close) it.source.close();
+    it.row.remove(); updateSummary();
+  }
+
+  /* ---------- Rendering ---------- */
+  const iconBtn = 'grid h-9 w-9 place-items-center rounded-lg text-lg hover:bg-raised disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent';
+
+  function buildRow(it) {
+    const li = document.createElement('li');
+    li.className = 'grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-4 gap-y-2 border-b border-line p-3 last:border-b-0 sm:grid-cols-[3.5rem_minmax(0,1fr)_auto]';
+    li.dataset.id = it.id;
+    li.innerHTML = `
+      <img src="${it.url}" alt="" class="checker h-14 w-14 rounded-md object-cover" loading="lazy">
+      <div class="min-w-0">
+        <p class="truncate font-medium" title="${esc(it.file.name)}">${esc(it.file.name)}</p>
+        <p data-meta class="text-sm tabular-nums text-muted"></p>
+        <div class="mt-1.5 h-1 overflow-hidden rounded-full bg-raised" aria-hidden="true"><div data-fill class="h-full w-0 rounded-full bg-accent transition-[width] duration-300"></div></div>
+      </div>
+      <div class="col-span-2 flex items-center justify-end gap-1 sm:col-span-1">
+        <span data-badge class="mr-2 whitespace-nowrap text-sm font-semibold tabular-nums"></span>
+        <button type="button" data-act="compare" class="${iconBtn}" title="Compare before and after" aria-label="Compare before and after"><i class="ri-layout-column-line" aria-hidden="true"></i></button>
+        <button type="button" data-act="save" class="${iconBtn}" title="Download" aria-label="Download optimized image"><i class="ri-download-2-line" aria-hidden="true"></i></button>
+        <button type="button" data-act="remove" class="${iconBtn}" title="Remove" aria-label="Remove image"><i class="ri-close-line" aria-hidden="true"></i></button>
+      </div>`;
+    it.row = li;
+    return li;
+  }
+
+  function updateRow(it) {
+    const q = (s) => it.row.querySelector(s);
+    const meta = q('[data-meta]'), fill = q('[data-fill]'), badge = q('[data-badge]');
+    const done = it.status === 'done';
+    q('[data-act="compare"]').disabled = !done;
+    q('[data-act="save"]').disabled = !done;
+    meta.classList.toggle('text-warn', it.status === 'error');
+    meta.classList.toggle('text-muted', it.status !== 'error');
+    badge.className = 'mr-2 whitespace-nowrap text-sm font-semibold tabular-nums';
+
+    if (it.status === 'queued') { meta.textContent = fmtBytes(it.file.size) + ', waiting'; badge.textContent = ''; }
+    else if (it.status === 'working') {
+      meta.textContent = fmtBytes(it.file.size) + ', optimizing';
+      badge.innerHTML = '<i class="ri-loader-4-line spin text-lg text-muted" aria-label="Working"></i>';
+    }
+    else if (it.status === 'error') { meta.textContent = it.error; badge.textContent = ''; fill.style.width = '0'; }
+    else {
+      const o = it.out, resized = o.w !== it.w || o.h !== it.h;
+      const dims = resized ? `${it.w} × ${it.h} → ${o.w} × ${o.h}` : `${it.w} × ${it.h}`;
+      meta.textContent = `${dims}, ${fmtBytes(it.file.size)} → ${fmtBytes(o.blob.size)}`;
+      const bigger = o.blob.size > it.file.size;
+      fill.style.width = Math.min(100, Math.max(2, (o.blob.size / it.file.size) * 100)) + '%';
+      fill.classList.toggle('bg-warn', bigger); fill.classList.toggle('bg-accent', !bigger);
+      badge.textContent = pctChange(it.file.size, o.blob.size);
+      badge.classList.add(bigger ? 'text-warn' : 'text-accent');
+    }
+  }
+
+  function updateSummary() {
+    const has = items.length > 0;
+    $('empty').classList.toggle('hidden', has);
+    $('results').classList.toggle('hidden', !has);
+    $('drop').classList.toggle('py-12', !has); $('drop').classList.toggle('py-6', has);
+    if (!has) return;
+    const done = items.filter((i) => i.status === 'done');
+    const pending = items.filter((i) => i.status === 'queued' || i.status === 'working').length;
+    const before = done.reduce((n, i) => n + i.file.size, 0), after = done.reduce((n, i) => n + i.out.blob.size, 0);
+    let text = items.length + (items.length === 1 ? ' image' : ' images');
+    if (done.length) text += `, ${fmtBytes(before)} → ${fmtBytes(after)}, ${pctChange(before, after)}`;
+    if (pending) text += `, ${pending} in progress`;
+    $('summary').textContent = text;
+    $('zip').disabled = !done.length || pending > 0;
+  }
+
+  function outName(it, used) {
+    const base = it.file.name.replace(/\.[^.]+$/, '') || 'image';
+    let name = `${base}.${it.out.ext}`, n = 2;
+    if (used) { while (used.has(name.toLowerCase())) name = `${base}-${n++}.${it.out.ext}`; used.add(name.toLowerCase()); }
+    return name;
+  }
+
+  /* ---------- Events ---------- */
+  $('file').addEventListener('change', (e) => { addFiles(e.target.files); e.target.value = ''; });
+
+  const drop = $('drop');
+  let dragDepth = 0;
+  const hot = (on) => { drop.classList.toggle('border-accent', on); drop.classList.toggle('bg-raised', on); };
+  window.addEventListener('dragenter', (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { dragDepth++; hot(true); } });
+  window.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) hot(false); });
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; hot(false); if (e.dataTransfer) addFiles(e.dataTransfer.files); });
+  window.addEventListener('paste', (e) => { if (e.clipboardData && e.clipboardData.files.length) addFiles(e.clipboardData.files); });
+
+  $('list').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act]'); if (!btn) return;
+    const it = items.find((i) => i.id === +btn.closest('li').dataset.id); if (!it) return;
+    if (btn.dataset.act === 'remove') removeItem(it);
+    if (btn.dataset.act === 'save' && it.out) saveBlob(it.out.blob, outName(it));
+    if (btn.dataset.act === 'compare' && it.out) openCompare(it);
+  });
+
+  $('clear').addEventListener('click', () => { [...items].forEach(removeItem); });
+
+  $('zip').addEventListener('click', async () => {
+    const done = items.filter((i) => i.status === 'done'); if (!done.length) return;
+    if (!window.JSZip) { toast('The ZIP library did not load. Check your connection, or download images one by one.'); return; }
+    const label = $('zipLabel'), btn = $('zip');
+    btn.disabled = true; label.textContent = 'Building ZIP';
+    try {
+      const zip = new JSZip(), used = new Set();
+      done.forEach((it) => zip.file(outName(it, used), it.out.blob));
+      saveBlob(await zip.generateAsync({ type: 'blob', compression: 'STORE' }), 'optimized-images.zip');
+    } catch { toast('The ZIP could not be built. Try downloading images one by one.'); }
+    label.textContent = 'Download all as ZIP'; updateSummary();
+  });
+
+  /* ---------- Compare ---------- */
+  const cmp = $('cmp'), range = $('cmpRange');
+  function setSplit(v) {
+    $('cmpBefore').style.clipPath = `inset(0 ${100 - v}% 0 0)`;
+    $('cmpLine').style.left = v + '%';
+  }
+  function openCompare(it) {
+    const o = it.out, stage = $('cmpStage');
+    $('cmpName').textContent = it.file.name;
+    $('cmpMeta').textContent = `${fmtBytes(it.file.size)} → ${fmtBytes(o.blob.size)}, ${pctChange(it.file.size, o.blob.size)}`;
+    stage.style.aspectRatio = `${o.w} / ${o.h}`;
+    stage.style.width = `min(100%, calc(72vh * ${o.w / o.h}))`;
+    $('cmpBefore').src = it.url; $('cmpAfter').src = it.outUrl;
+    range.value = 50; setSplit(50);
+    cmp.showModal(); range.focus();
+  }
+  range.addEventListener('input', () => setSplit(+range.value));
+  $('cmpClose').addEventListener('click', () => cmp.close());
+  cmp.addEventListener('click', (e) => { if (e.target === cmp) cmp.close(); });
+})();
+</script>
+</body>
+</html>
