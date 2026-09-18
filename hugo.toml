@@ -2,7 +2,7 @@ baseURL = 'https://experiments.dangerzonedad.com/'
 languageCode = 'en-us'
 title = 'Experiments | DangerZoneDad'
 enableGitInfo = true
-timeZone = America/Denver
+timeZone = 'America/Denver'
 
 [params]
 	description = 'A collection of browser experiments created with GenAI'
