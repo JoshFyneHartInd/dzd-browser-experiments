@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="{{ site.Params.description | default .Description }}">
     <title>{{ site.Title }}</title>
+    {{ template "_internal/google_analytics.html" . }}
     <link rel="stylesheet" href="{{ "css/site.css" | relURL }}">
   </head>
   <body>
@@ -34,9 +35,9 @@
       <footer>
         <span>
           {{ with .GitInfo }}
-            Build: {{ .AbbreviatedHash }} - {{ time.Now.Unix }}
+            Build: {{ .AbbreviatedHash }} - {{ time.Now | time.Format "2006-01-02 15:04:05 -06" }}
           {{ else }}
-            Build: unavailable - {{ time.Now.Unix }}
+            Build: unavailable - {{ time.Now | time.Format "2006-01-02 15:04:05 -06" }}
           {{ end }}
         </span>
       </footer>

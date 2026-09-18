@@ -5,3 +5,7 @@ enableGitInfo = true
 
 [params]
 	description = 'A collection of browser experiments created with GenAI'
+
+[services]
+  	[services.googleAnalytics]
+   		id = 'G-9L56M94T2W'
