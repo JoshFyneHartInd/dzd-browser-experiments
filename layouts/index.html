@@ -35,9 +35,9 @@
       <footer>
         <span>
           {{ with .GitInfo }}
-            Build: {{ .AbbreviatedHash }} - {{ time.Now | time.Format "2006-01-02 15:04 Z-06" }}
+            Build: {{ .AbbreviatedHash }} - {{ time.Now | time.Format "2006-01-02 15:04 MST" }}
           {{ else }}
-            Build: unavailable - {{ time.Now | time.Format "2006-01-02 15:04 Z-06" }}
+            Build: unavailable - {{ time.Now | time.Format "2006-01-02 15:04 MST" }}
           {{ end }}
         </span>
       </footer>
