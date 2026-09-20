@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nodepad | A JSON/YAML Explorer</title>
 
+
 <!-- Theme applied before first paint, to avoid a flash of the wrong theme -->
 <script>
   (function () {
@@ -195,6 +196,17 @@
   .truncate-2 {
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
+
+  /* drag-to-reorder handles in the detail panel */
+  .drag-handle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; color: var(--muted); cursor: grab; border-radius: 4px;
+  }
+  .drag-handle:hover { color: var(--text); background: var(--border); }
+  .drag-handle:active { cursor: grabbing; }
+  [data-index].dragging { opacity: .4; }
+  [data-index].drop-above { box-shadow: inset 0 2px 0 0 var(--accent); }
+  [data-index].drop-below { box-shadow: inset 0 -2px 0 0 var(--accent); }
 </style>
 </head>
 <body class="flex flex-col h-screen">
@@ -841,7 +853,7 @@ function renderObjectEditor(obj, path) {
   const keys = Object.keys(obj);
   wrap.innerHTML = `<h3 class="text-xs font-semibold text-muted uppercase tracking-wide mb-2" style="letter-spacing:.03em">${keys.length ? 'Properties' : 'No properties yet'}</h3>`;
   const list = document.createElement('div'); list.className = 'space-y-1.5';
-  keys.forEach((key) => list.appendChild(buildChildRow(obj[key], key, path.concat([key]), obj, key)));
+  keys.forEach((key, i) => list.appendChild(buildChildRow(obj[key], key, path.concat([key]), obj, i)));
   wrap.appendChild(list);
   wrap.appendChild(buildAddRow(path, 'object'));
   detailPane.appendChild(wrap);
@@ -862,8 +874,20 @@ function renderArrayEditor(arr, path) {
 
 function buildChildRow(value, keyOrIndex, childPath, container, indexInContainer, isArrayItem) {
   const type = typeOf(value);
+  const containerPath = childPath.slice(0, -1);
   const row = document.createElement('div');
   row.className = 'flex items-center gap-2 p-2 rounded-lg surface-2 border';
+  row.dataset.index = String(indexInContainer);
+
+  const handle = document.createElement('span');
+  handle.className = 'drag-handle flex-none';
+  handle.draggable = true;
+  handle.setAttribute('role', 'button');
+  handle.setAttribute('tabindex', '0');
+  handle.setAttribute('aria-label', `Reorder ${isArrayItem ? 'item ' + keyOrIndex : keyOrIndex} — drag, or use arrow keys while focused, to move it within this ${isArrayItem ? 'array' : 'object'}`);
+  handle.innerHTML = `<i class="fa-solid fa-grip-vertical" aria-hidden="true"></i>`;
+  wireDragHandle(handle, row, containerPath, indexInContainer);
+  row.appendChild(handle);
 
   if (isArrayItem) {
     const idx = document.createElement('span');
@@ -903,6 +927,82 @@ function buildChildRow(value, keyOrIndex, childPath, container, indexInContainer
   row.appendChild(del);
   return row;
 }
+
+/* ---- drag-and-drop reordering (siblings within the same object/array only) ---- */
+let dragState = null; // { containerPath, fromIndex }
+
+function wireDragHandle(handle, row, containerPath, index) {
+  handle.addEventListener('dragstart', (e) => {
+    dragState = { containerPath, fromIndex: index };
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index)); // Firefox requires data to be set to allow the drag
+    e.dataTransfer.setDragImage(row, 16, 16);
+    row.classList.add('dragging');
+  });
+  handle.addEventListener('dragend', () => {
+    row.classList.remove('dragging');
+    clearDropIndicators();
+    dragState = null;
+  });
+  // Keyboard alternative to dragging: move focused item with Arrow keys.
+  handle.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const dir = e.key === 'ArrowUp' ? -1 : 1;
+    const container = getAtPath(state.root, containerPath);
+    const max = (Array.isArray(container) ? container.length : Object.keys(container).length) - 1;
+    const to = Math.min(max, Math.max(0, index + dir));
+    if (to === index) return;
+    reorderContainer(containerPath, index, to);
+    requestAnimationFrame(() => {
+      const newHandle = detailPane.querySelector(`[data-index="${to}"] .drag-handle`);
+      if (newHandle) newHandle.focus();
+    });
+  });
+
+  row.addEventListener('dragover', (e) => {
+    if (!dragState || pathKey(dragState.containerPath) !== pathKey(containerPath)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = row.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    clearDropIndicators();
+    row.classList.add(before ? 'drop-above' : 'drop-below');
+  });
+  row.addEventListener('dragleave', () => {
+    row.classList.remove('drop-above', 'drop-below');
+  });
+  row.addEventListener('drop', (e) => {
+    if (!dragState || pathKey(dragState.containerPath) !== pathKey(containerPath)) return;
+    e.preventDefault();
+    const rect = row.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    let toIndex = index + (before ? 0 : 1);
+    if (dragState.fromIndex < toIndex) toIndex -= 1; // account for the item's own removal shifting later indices
+    reorderContainer(containerPath, dragState.fromIndex, toIndex);
+    clearDropIndicators();
+    dragState = null;
+  });
+}
+function clearDropIndicators() {
+  detailPane.querySelectorAll('.drop-above, .drop-below').forEach(el => el.classList.remove('drop-above', 'drop-below'));
+}
+function reorderContainer(containerPath, fromIndex, toIndex) {
+  if (fromIndex === toIndex) return;
+  const container = getAtPath(state.root, containerPath);
+  if (Array.isArray(container)) {
+    const [item] = container.splice(fromIndex, 1);
+    container.splice(toIndex, 0, item);
+  } else {
+    const entries = Object.entries(container);
+    const [entry] = entries.splice(fromIndex, 1);
+    entries.splice(toIndex, 0, entry);
+    for (const k of Object.keys(container)) delete container[k];
+    for (const [k, v] of entries) container[k] = v;
+  }
+  markDirtyAndRefresh(containerPath);
+}
+
 function iconButton(iconClass, label, onClick, danger) {
   const b = document.createElement('button');
   b.className = 'btn btn-icon !p-1.5' + (danger ? ' btn-danger' : '');
