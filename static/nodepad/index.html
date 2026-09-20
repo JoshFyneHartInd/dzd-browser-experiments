@@ -50,17 +50,91 @@
     --danger: #c62839; --success: #10855f; --warn: #9a6400;
     --focus: #2461e0;
   }
-  :root[data-theme="ocean"] {
-    --bg: #0b1c26; --surface: #102734; --surface-2: #163241; --border: #24475a;
-    --text: #dff1f7; --muted: #86aec0; --accent: #26c6da; --accent-text:#04262c;
-    --danger: #ff6b6b; --success: #4fd6a8; --warn: #ffcc66;
-    --focus: #26c6da;
-  }
   :root[data-theme="sepia"] {
     --bg: #f4ecdd; --surface: #fbf6ea; --surface-2: #ece1cb; --border: #d8c8a6;
     --text: #3a2f22; --muted: #7a6a52; --accent: #a15c2a; --accent-text:#fff8ee;
     --danger: #ad2f2f; --success: #4c7a3f; --warn: #8a5b12;
     --focus: #a15c2a;
+  }
+  :root[data-theme="solarized-light"] {
+    --bg: #fdf6e3; --surface: #fdf6e3; --surface-2: #eee8d5; --border: #eee8d5;
+    --text: #586e75; --muted: #93a1a1; --accent: #268bd2; --accent-text: #000000;
+    --danger: #dc322f; --success: #859900; --warn: #b58900; --focus: #268bd2;
+  }
+  :root[data-theme="solarized-dark"] {
+    --bg: #002b36; --surface: #002b36; --surface-2: #073642; --border: #073642;
+    --text: #93a1a1; --muted: #586e75; --accent: #268bd2; --accent-text: #000000;
+    --danger: #dc322f; --success: #859900; --warn: #b58900; --focus: #268bd2;
+  }
+  :root[data-theme="dracula"] {
+    --bg: #282a36; --surface: #282a36; --surface-2: #343746; --border: #44475a;
+    --text: #f8f8f2; --muted: #6272a4; --accent: #bd93f9; --accent-text: #282a36;
+    --danger: #ff5555; --success: #50fa7b; --warn: #f1fa8c; --focus: #bd93f9;
+  }
+  :root[data-theme="nord"] {
+    --bg: #2e3440; --surface: #2e3440; --surface-2: #3b4252; --border: #434c5e;
+    --text: #eceff4; --muted: #81a1c1; --accent: #88c0d0; --accent-text: #2e3440;
+    --danger: #bf616a; --success: #a3be8c; --warn: #ebcb8b; --focus: #88c0d0;
+  }
+  :root[data-theme="github-light"] {
+    --bg: #ffffff; --surface: #ffffff; --surface-2: #f6f8fa; --border: #d0d7de;
+    --text: #24292f; --muted: #57606a; --accent: #0969da; --accent-text: #ffffff;
+    --danger: #cf222e; --success: #1a7f37; --warn: #9a6700; --focus: #0969da;
+  }
+  :root[data-theme="github-dark"] {
+    --bg: #0d1117; --surface: #0d1117; --surface-2: #161b22; --border: #30363d;
+    --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff; --accent-text: #0d1117;
+    --danger: #f85149; --success: #3fb950; --warn: #d29922; --focus: #58a6ff;
+  }
+  :root[data-theme="monokai"] {
+    --bg: #272822; --surface: #272822; --surface-2: #3e3d32; --border: #49483e;
+    --text: #f8f8f2; --muted: #a6a69c; --accent: #66d9ef; --accent-text: #272822;
+    --danger: #f92672; --success: #a6e22e; --warn: #e6db74; --focus: #66d9ef;
+  }
+  :root[data-theme="one-dark"] {
+    --bg: #282c34; --surface: #282c34; --surface-2: #21252b; --border: #3e4451;
+    --text: #abb2bf; --muted: #7f848e; --accent: #61afef; --accent-text: #282c34;
+    --danger: #e06c75; --success: #98c379; --warn: #e5c07b; --focus: #61afef;
+  }
+  :root[data-theme="ocean"] {
+    --bg: #0b1c26; --surface: #102734; --surface-2: #163241; --border: #24475a;
+    --text: #dff1f7; --muted: #86aec0; --accent: #26c6da; --accent-text:#04262c;
+    --danger: #ff6b6b; --success: #4fd6a8; --warn: #ffcc66; --focus: #26c6da;
+  }
+  :root[data-theme="ocean-deep"] {
+    --bg: #073642; --surface: #073642; --surface-2: #0b4652; --border: #176b75;
+    --text: #d9f3f0; --muted: #83b8bd; --accent: #5eead4; --accent-text: #073642;
+    --danger: #ff8b8b; --success: #a8e6cf; --warn: #ffcc66; --focus: #5eead4;
+  }
+  :root[data-theme="forest"] {
+    --bg: #17261b; --surface: #17261b; --surface-2: #223a28; --border: #36533b;
+    --text: #e6f1d8; --muted: #98ae91; --accent: #d6f36b; --accent-text: #17261b;
+    --danger: #f29b9b; --success: #b9e769; --warn: #e8c468; --focus: #d6f36b;
+  }
+  :root[data-theme="sunset"] {
+    --bg: #3a1832; --surface: #3a1832; --surface-2: #51213b; --border: #71324e;
+    --text: #fff0dc; --muted: #d6a6a1; --accent: #ffad69; --accent-text: #3a1832;
+    --danger: #ff8c82; --success: #ffd166; --warn: #ffb454; --focus: #ffad69;
+  }
+  :root[data-theme="candy"] {
+    --bg: #ffe5f1; --surface: #ffe5f1; --surface-2: #ffd1e5; --border: #e9a8ca;
+    --text: #43264f; --muted: #956a8e; --accent: #c43d82; --accent-text: #ffffff;
+    --danger: #d94770; --success: #168f78; --warn: #e8a33d; --focus: #c43d82;
+  }
+  :root[data-theme="synthwave"] {
+    --bg: #17102d; --surface: #17102d; --surface-2: #25164a; --border: #593b86;
+    --text: #f5e9ff; --muted: #b9a5d6; --accent: #ff7edb; --accent-text: #17102d;
+    --danger: #ff6b9d; --success: #61f4de; --warn: #f9c80e; --focus: #ff7edb;
+  }
+  :root[data-theme="citrus"] {
+    --bg: #f1f5c9; --surface: #f1f5c9; --surface-2: #e4ed9f; --border: #c7d66b;
+    --text: #26351c; --muted: #718047; --accent: #e07a20; --accent-text: #000000;
+    --danger: #bd4e37; --success: #397c3f; --warn: #d99a2b; --focus: #e07a20;
+  }
+  :root[data-theme="high-contrast"] {
+    --bg: #000000; --surface: #000000; --surface-2: #000000; --border: #ffffff;
+    --text: #ffffff; --muted: #cccccc; --accent: #ffff00; --accent-text: #000000;
+    --danger: #ff3333; --success: #00ff66; --warn: #ffaa00; --focus: #ffff00;
   }
 
   * { box-sizing: border-box; }
@@ -292,8 +366,21 @@
       <button role="menuitem" data-theme="system" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Match system</button>
       <button role="menuitem" data-theme="light" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Light</button>
       <button role="menuitem" data-theme="dark" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Dark</button>
-      <button role="menuitem" data-theme="ocean" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Ocean</button>
+      <button role="menuitem" data-theme="nord" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Nord</button>
+      <button role="menuitem" data-theme="github-light" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">GitHub Light</button>
+      <button role="menuitem" data-theme="github-dark" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">GitHub Dark</button>
+      <button role="menuitem" data-theme="monokai" class="theme-item w-full text-left px-3 py-2 hover :bg-[var(--surface-2)] text-sm">Monokai</button>
+      <button role="menuitem" data-theme="one-dark" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">One Dark</button>
       <button role="menuitem" data-theme="sepia" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Sepia</button>
+      <button role="menuitem" data-theme="dracula" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Dracula</button>
+      <button role="menuitem" data-theme="synthwave" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Synthwave</button>
+      <button role="menuitem" data-theme="ocean" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Ocean</button>
+      <button role="menuitem" data-theme="ocean-deep" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Ocean Deep</button>
+      <button role="menuitem" data-theme="forest" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Forest</button>
+      <button role="menuitem" data-theme="sunset" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Sunset</button>
+      <button role="menuitem" data-theme="candy" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Candy</button>
+      <button role="menuitem" data-theme="citrus" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Citrus</button>
+      <button role="menuitem" data-theme="high-contrast" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">High contrast</button>
     </div>
   </div>
 </header>
