@@ -134,7 +134,8 @@
      class and the icon's color was an inline style, so neither actually applied,
      leaving low-contrast muted-on-accent text on a selected row. */
   .tree-row.selected .tree-sub,
-  .tree-row.selected .tree-icon { color: var(--accent-text); opacity: 1; }
+  .tree-row.selected .tree-icon,
+  .tree-row.selected .tree-toggle { color: var(--accent-text); opacity: 1; }
   .tree-row.dimmed { opacity: .35; }
   .tree-toggle {
     width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center;
@@ -575,6 +576,14 @@ function buildTreeItem(value, key, path, level) {
     selectPath(path);
     if (window.innerWidth < BREAKPOINT) closeDrawer();
   });
+  if (isContainer) {
+    row.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      selectPath(path);
+      setExpanded(path, !isExpanded(path));
+      renderTree();
+    });
+  }
   if (isContainer) {
     toggle.style.cursor = 'pointer';
     toggle.setAttribute('role', 'button');
