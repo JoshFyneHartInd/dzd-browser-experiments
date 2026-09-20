@@ -56,16 +56,6 @@
     --danger: #ad2f2f; --success: #4c7a3f; --warn: #8a5b12;
     --focus: #a15c2a;
   }
-  :root[data-theme="solarized-light"] {
-    --bg: #fdf6e3; --surface: #fdf6e3; --surface-2: #eee8d5; --border: #eee8d5;
-    --text: #586e75; --muted: #93a1a1; --accent: #268bd2; --accent-text: #000000;
-    --danger: #dc322f; --success: #859900; --warn: #b58900; --focus: #268bd2;
-  }
-  :root[data-theme="solarized-dark"] {
-    --bg: #002b36; --surface: #002b36; --surface-2: #073642; --border: #073642;
-    --text: #93a1a1; --muted: #586e75; --accent: #268bd2; --accent-text: #000000;
-    --danger: #dc322f; --success: #859900; --warn: #b58900; --focus: #268bd2;
-  }
   :root[data-theme="dracula"] {
     --bg: #282a36; --surface: #282a36; --surface-2: #343746; --border: #44475a;
     --text: #f8f8f2; --muted: #6272a4; --accent: #ff7171; --accent-text: #282a36;
@@ -78,13 +68,13 @@
   }
   :root[data-theme="github-light"] {
     --bg: #ffffff; --surface: #ffffff; --surface-2: #f6f8fa; --border: #d0d7de;
-    --text: #24292f; --muted: #57606a; --accent: #0969da; --accent-text: #ffffff;
-    --danger: #cf222e; --success: #1a7f37; --warn: #9a6700; --focus: #0969da;
+    --text: #24292f; --muted: #57606a; --accent: #1a7f37; --accent-text: #ffffff;
+    --danger: #cf222e; --success: #1a7f37; --warn: #9a6700; --focus: #1a7f37;
   }
   :root[data-theme="github-dark"] {
     --bg: #0d1117; --surface: #0d1117; --surface-2: #161b22; --border: #30363d;
-    --text: #c9d1d9; --muted: #8b949e; --accent: #58a6ff; --accent-text: #0d1117;
-    --danger: #f85149; --success: #3fb950; --warn: #d29922; --focus: #58a6ff;
+    --text: #c9d1d9; --muted: #8b949e; --accent: #3fb950; --accent-text: #0d1117;
+    --danger: #f85149; --success: #3fb950; --warn: #d29922; --focus: #3fb950;
   }
   :root[data-theme="monokai"] {
     --bg: #272822; --surface: #272822; --surface-2: #3e3d32; --border: #49483e;
@@ -93,8 +83,8 @@
   }
   :root[data-theme="one-dark"] {
     --bg: #282c34; --surface: #282c34; --surface-2: #21252b; --border: #3e4451;
-    --text: #abb2bf; --muted: #7f848e; --accent: #61afef; --accent-text: #282c34;
-    --danger: #e06c75; --success: #98c379; --warn: #e5c07b; --focus: #61afef;
+    --text: #abb2bf; --muted: #7f848e; --accent: #98c379; --accent-text: #282c34;
+    --danger: #e06c75; --success: #98c379; --warn: #e5c07b; --focus: #98c379;
   }
   :root[data-theme="ocean-deep"] {
     --bg: #0b1c26; --surface: #102734; --surface-2: #163241; --border: #24475a;
@@ -397,8 +387,6 @@
       <button role="menuitem" data-theme="light" class="theme-item w-full text-left px-2 py-1 hover:bg-[var(--surface-2)] text-sm">Light</button>
       <button role="menuitem" data-theme="dark" class="theme-item w-full text-left px-2 py-1 hover:bg-[var(--surface-2)] text-sm">Dark</button>
       <button role="menuitem" data-theme="nord" class="theme-item w-full text-left px-2 py-1 hover:bg-[var(--surface-2)] text-sm">Nord</button>
-      <button role="menuitem" data-theme="solarized-light" class="theme-item w-full text-left px-2 py-1 hover:bg-[var(--surface-2)] text-sm">Solarized Light</button>
-      <button role="menuitem" data-theme="solarized-dark" class="theme-item w-full text-left px-2 py-1 hover:bg-[var(--surface-2)] text-sm">Solarized Dark</button>
       <button role="menuitem" data-theme="github-light" class="theme-item w-full text-left px-2 py-1 hover:bg-[var(--surface-2)] text-sm">GitHub Light</button>
       <button role="menuitem" data-theme="github-dark" class="theme-item w-full text-left px-2 py-1 hover:bg-[var(--surface-2)] text-sm">GitHub Dark</button>
       <button role="menuitem" data-theme="monokai" class="theme-item w-full text-left px-2 py-1 hover:bg-[var(--surface-2)] text-sm">Monokai</button>
