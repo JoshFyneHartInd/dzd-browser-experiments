@@ -27,8 +27,10 @@
 
 <!-- Libraries: Tailwind (Play CDN), Font Awesome (icon font), js-yaml (YAML parse/serialize) -->
 <script src="https://cdn.tailwindcss.com" onerror="window.__jyeMissing.push('styling')"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="window.__jyeMissing.push('icons')">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="window.__jyeMissing.push('yaml')"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      crossorigin="anonymous" referrerpolicy="no-referrer" onerror="window.__jyeMissing.push('icons')">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"
+        crossorigin="anonymous" referrerpolicy="no-referrer" onerror="window.__jyeMissing.push('yaml')"></script>
 
 <style>
   /* ===================== THEME TOKENS ===================== */
@@ -204,7 +206,7 @@
   </button>
   <h1 class="font-semibold text-sm flex items-center gap-2 mr-2">
     <i class="fa-solid fa-folder-tree text-muted" aria-hidden="true"></i>
-    <span class="hidden sm:inline">Nodepad</span>
+    <span class="hidden sm:inline">JSON/YAML Explorer</span>
   </h1>
 
   <div class="flex items-center gap-1 border-l border-hairline pl-2 ml-1">
@@ -674,18 +676,26 @@ function focusPath(path) {
   const it = visibleItems.find(v => pathKey(v.path) === pathKey(path));
   if (it) { it.el.tabIndex = 0; it.el.focus(); }
 }
+// Scrolls a tree row into view without moving keyboard focus there — used while the
+// person is still typing in the search box, so the row they're jumping to stays
+// visible but their cursor and keystrokes stay in the search field.
+function revealPath(path) {
+  const it = visibleItems.find(v => pathKey(v.path) === pathKey(path));
+  if (it) it.el.scrollIntoView({ block: 'nearest' });
+}
 
 /* =====================================================================
    SECTION 7 — SELECTION, BREADCRUMB, DETAIL PANEL
    ===================================================================== */
-function selectPath(path) {
+function selectPath(path, opts) {
+  const focus = !opts || opts.focus !== false;
   state.selectedPath = path;
   // ensure ancestors are expanded so the item is visible
   for (let i = 0; i < path.length; i++) setExpanded(path.slice(0, i), true);
   renderTree();
   renderBreadcrumb();
   renderDetail();
-  focusPath(path);
+  if (focus) focusPath(path); else revealPath(path);
 }
 
 function renderBreadcrumb() {
@@ -1055,7 +1065,7 @@ function applySearch(newQuery) {
   if (newQuery) {
     for (const m of state.search.matches) for (let i = 0; i < m.length; i++) setExpanded(m.slice(0, i), true);
     state.search.activeIndex = state.search.matches.length ? 0 : -1;
-    if (state.search.activeIndex >= 0) selectPath(state.search.matches[0]);
+    if (state.search.activeIndex >= 0) selectPath(state.search.matches[0], { focus: false });
   }
   if (clearing && state.savedExpandedSnapshot) {
     state.expanded = state.savedExpandedSnapshot;
@@ -1071,7 +1081,7 @@ function applySearch(newQuery) {
 searchInput.addEventListener('input', (e) => {
   clearTimeout(searchDebounce);
   const val = e.target.value;
-  searchDebounce = setTimeout(() => applySearch(val), 200);
+  searchDebounce = setTimeout(() => applySearch(val), 400);
 });
 searchInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); jumpMatch(e.shiftKey ? -1 : 1); }
@@ -1089,7 +1099,10 @@ function jumpMatch(dir) {
   const m = state.search.matches;
   if (!m.length) return;
   state.search.activeIndex = (state.search.activeIndex + dir + m.length) % m.length;
-  selectPath(m[state.search.activeIndex]);
+  // Keep focus in the search input so Enter/Shift+Enter and the prev/next buttons
+  // can be pressed repeatedly without the cursor jumping away each time.
+  selectPath(m[state.search.activeIndex], { focus: false });
+  searchInput.focus();
   updateSearchCountLabel();
 }
 
