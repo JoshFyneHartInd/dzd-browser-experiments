@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nodepad | A JSON/YAML Explorer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>">
+
+<!-- Theme applied before first paint, to avoid a flash of the wrong theme -->
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('jye:theme') || 'system';
+      var resolved = saved;
+      if (saved === 'system') {
+        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', resolved);
+      document.documentElement.setAttribute('data-theme-pref', saved);
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+
+<!-- Must exist before any CDN tag below, since their onerror handlers push into it and can fire immediately -->
+<script>window.__jyeMissing = [];</script>
+
+<!-- Libraries: Tailwind (Play CDN), Font Awesome (icon font), js-yaml (YAML parse/serialize) -->
+<script src="https://cdn.tailwindcss.com" onerror="window.__jyeMissing.push('styling')"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+      crossorigin="anonymous" referrerpolicy="no-referrer" onerror="window.__jyeMissing.push('icons')">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"
+        integrity="sha512-dIcRvKNMxU8v2FucnetSw77TW/vJ+iQGgLwvSl5s8fA5F9jsQNhP2t5A5dR9K4paTVnI8y+d7z1p4wSjTBiRXQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" onerror="window.__jyeMissing.push('yaml')"></script>
+
+<style>
+  /* ===================== THEME TOKENS ===================== */
+  :root {
+    --radius: 8px;
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a; --surface: #1c1f26; --surface-2: #242832; --border: #333846;
+    --text: #e6e8ec; --muted: #9aa1b0; --accent: #5b9dff; --accent-text:#0a1930;
+    --danger: #f0576b; --success: #3ecf8e; --warn: #f0b84b;
+    --focus: #5b9dff;
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f7f9; --surface: #ffffff; --surface-2: #eef0f4; --border: #d9dce3;
+    --text: #1b1e24; --muted: #5c6270; --accent: #2461e0; --accent-text:#ffffff;
+    --danger: #c62839; --success: #10855f; --warn: #9a6400;
+    --focus: #2461e0;
+  }
+  :root[data-theme="ocean"] {
+    --bg: #0b1c26; --surface: #102734; --surface-2: #163241; --border: #24475a;
+    --text: #dff1f7; --muted: #86aec0; --accent: #26c6da; --accent-text:#04262c;
+    --danger: #ff6b6b; --success: #4fd6a8; --warn: #ffcc66;
+    --focus: #26c6da;
+  }
+  :root[data-theme="sepia"] {
+    --bg: #f4ecdd; --surface: #fbf6ea; --surface-2: #ece1cb; --border: #d8c8a6;
+    --text: #3a2f22; --muted: #7a6a52; --accent: #a15c2a; --accent-text:#fff8ee;
+    --danger: #ad2f2f; --success: #4c7a3f; --warn: #8a5b12;
+    --focus: #a15c2a;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  code, .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  .surface { background: var(--surface); border-color: var(--border); }
+  .surface-2 { background: var(--surface-2); border-color: var(--border); }
+  .text-muted { color: var(--muted); }
+  .border-hairline { border-color: var(--border); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .4rem .65rem; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+    font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { filter: brightness(0.95); }
+  .btn-accent { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+  .btn-danger { color: var(--danger); }
+  .btn-icon { padding: .4rem .5rem; }
+  .input {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--radius); padding: .35rem .55rem; font-size: 13px; width: 100%;
+  }
+  .input[aria-invalid="true"] { border-color: var(--danger); }
+  select.input { appearance: none; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: 11px; padding: .1rem .45rem; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--muted);
+  }
+  .badge-object { color: #a48cff; border-color: #a48cff55; }
+  .badge-array { color: #ffb865; border-color: #ffb86555; }
+  .badge-string { color: #6fd0a4; border-color: #6fd0a455; }
+  .badge-number { color: #67b8ff; border-color: #67b8ff55; }
+  .badge-boolean { color: #ff9ac4; border-color: #ff9ac455; }
+  .badge-null { color: var(--muted); }
+
+  /* ===================== TREE ===================== */
+  #tree-scroll { overflow: auto; }
+  .tree-row {
+    display: flex; align-items: center; gap: .3rem;
+    padding: .2rem .3rem; border-radius: 6px; cursor: pointer;
+    white-space: nowrap;
+  }
+  .tree-row:hover { background: var(--surface-2); }
+  .tree-row.selected { background: var(--accent); color: var(--accent-text); }
+  .tree-row.selected .text-muted { color: var(--accent-text); opacity: .8; }
+  .tree-row.dimmed { opacity: .35; }
+  .tree-toggle {
+    width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center;
+    flex: none; color: var(--muted); font-size: 10px;
+  }
+  .tree-toggle.leaf { visibility: hidden; }
+  .tree-label { overflow: hidden; text-overflow: ellipsis; }
+  .tree-sub { color: var(--muted); font-size: 11px; margin-left: .25rem; }
+  mark.match { background: var(--warn); color: #1a1400; border-radius: 2px; padding: 0 1px; }
+  .tree-row.selected mark.match { background: #ffffff; color: #1a1400; }
+  [role="group"] { margin-left: 1rem; border-left: 1px dashed var(--border); padding-left: .5rem; }
+
+  /* ===================== LAYOUT ===================== */
+  #resize-handle {
+    width: 6px; cursor: col-resize; flex: none;
+    background: transparent;
+  }
+  #resize-handle:hover, #resize-handle.dragging { background: var(--accent); }
+
+  #tree-drawer-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 40; display: none;
+  }
+  @media (max-width: 767px) {
+    #tree-pane {
+      position: fixed; top: 0; left: 0; bottom: 0; width: 85vw; max-width: 340px;
+      z-index: 41; transform: translateX(-100%); transition: transform .18s ease-out;
+      box-shadow: 4px 0 24px rgba(0,0,0,.35);
+    }
+    #tree-pane.open { transform: translateX(0); }
+    #tree-drawer-backdrop.open { display: block; }
+    #resize-handle { display: none; }
+  }
+
+  .toast {
+    display: flex; gap: .5rem; align-items: flex-start; padding: .6rem .75rem;
+    border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface);
+    box-shadow: 0 4px 18px rgba(0,0,0,.25); max-width: 360px; font-size: 13px;
+  }
+  .toast.error { border-color: var(--danger); }
+  .toast.error i { color: var(--danger); }
+  .toast.success i { color: var(--success); }
+
+  .row-fade-enter { animation: fadeIn .12s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  dialog::backdrop { background: rgba(0,0,0,.5); }
+  dialog {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0; max-width: 480px; width: 92vw;
+  }
+
+  .dropzone {
+    border: 2px dashed var(--border); border-radius: 12px; padding: 1.5rem; text-align: center;
+    color: var(--muted); cursor: pointer;
+  }
+  .dropzone.drag { border-color: var(--accent); color: var(--text); background: var(--surface-2); }
+
+  .truncate-2 {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+</style>
+</head>
+<body class="flex flex-col h-screen">
+
+<!-- ===================== TOP BAR ===================== -->
+<header class="flex items-center gap-2 px-3 py-2 border-b border-hairline surface flex-none">
+  <button id="drawer-toggle" class="btn btn-icon md:hidden" aria-label="Show tree" aria-expanded="false" aria-controls="tree-pane">
+    <i class="fa-solid fa-bars" aria-hidden="true"></i>
+  </button>
+  <h1 class="font-semibold text-sm flex items-center gap-2 mr-2">
+    <i class="fa-solid fa-folder-tree text-muted" aria-hidden="true"></i>
+    <span class="hidden sm:inline">Nodepad</span>
+  </h1>
+
+  <div class="flex items-center gap-1 border-l border-hairline pl-2 ml-1">
+    <button id="btn-new" class="btn btn-icon" aria-label="New document" title="New">
+      <i class="fa-regular fa-file" aria-hidden="true"></i>
+    </button>
+    <button id="btn-open" class="btn btn-icon" aria-label="Open document" title="Open">
+      <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
+    </button>
+    <div class="relative">
+      <button id="btn-export" class="btn btn-icon" aria-label="Export document" title="Export" aria-haspopup="menu" aria-expanded="false">
+        <i class="fa-solid fa-download" aria-hidden="true"></i>
+      </button>
+      <div id="export-menu" role="menu" class="hidden absolute left-0 mt-1 w-40 surface border rounded-lg shadow-lg z-30 overflow-hidden">
+        <button role="menuitem" data-format="json" class="export-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Export as .json</button>
+        <button role="menuitem" data-format="yaml" class="export-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Export as .yaml</button>
+      </div>
+    </div>
+  </div>
+
+  <span id="dirty-indicator" class="text-xs text-muted hidden items-center gap-1 ml-1">
+    <i class="fa-solid fa-circle text-[6px]" style="color:var(--warn)" aria-hidden="true"></i> Unsaved changes
+  </span>
+  <span id="filename-label" class="text-xs text-muted mono ml-1 truncate max-w-[140px]" title="">untitled.json</span>
+
+  <div class="flex-1"></div>
+
+  <div class="hidden md:flex items-center gap-1 text-xs text-muted mr-1">
+    <label for="search-mode" class="sr-only">Search in</label>
+    <select id="search-mode" class="input !w-auto text-xs py-1">
+      <option value="both">Keys &amp; values</option>
+      <option value="keys">Keys only</option>
+      <option value="values">Values only</option>
+    </select>
+  </div>
+  <div class="relative w-40 sm:w-56">
+    <label for="search-input" class="sr-only">Search the document</label>
+    <i class="fa-solid fa-magnifying-glass absolute left-2 top-1/2 -translate-y-1/2 text-muted text-xs" aria-hidden="true"></i>
+    <input id="search-input" type="text" class="input !pl-7 !pr-16" placeholder="Search…" autocomplete="off">
+    <div class="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+      <button id="search-prev" class="btn btn-icon !p-1 hidden" aria-label="Previous match"><i class="fa-solid fa-chevron-up text-[10px]" aria-hidden="true"></i></button>
+      <button id="search-next" class="btn btn-icon !p-1 hidden" aria-label="Next match"><i class="fa-solid fa-chevron-down text-[10px]" aria-hidden="true"></i></button>
+      <button id="search-clear" class="btn btn-icon !p-1 hidden" aria-label="Clear search"><i class="fa-solid fa-xmark text-[10px]" aria-hidden="true"></i></button>
+    </div>
+  </div>
+  <span id="search-count" class="text-xs text-muted w-16 text-right" aria-live="polite"></span>
+
+  <div class="relative border-l border-hairline pl-2 ml-1">
+    <button id="btn-theme" class="btn btn-icon" aria-haspopup="menu" aria-expanded="false" aria-label="Change theme" title="Theme">
+      <i class="fa-solid fa-circle-half-stroke" aria-hidden="true"></i>
+    </button>
+    <div id="theme-menu" role="menu" class="hidden absolute right-0 mt-1 w-36 surface border rounded-lg shadow-lg z-30 overflow-hidden">
+      <button role="menuitem" data-theme="system" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Match system</button>
+      <button role="menuitem" data-theme="light" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Light</button>
+      <button role="menuitem" data-theme="dark" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Dark</button>
+      <button role="menuitem" data-theme="ocean" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Ocean</button>
+      <button role="menuitem" data-theme="sepia" class="theme-item w-full text-left px-3 py-2 hover:bg-[var(--surface-2)] text-sm">Sepia</button>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== BREADCRUMB BAR ===================== -->
+<nav id="breadcrumb" aria-label="Node path" class="flex items-center gap-1 px-3 py-1.5 border-b border-hairline surface-2 text-xs overflow-x-auto flex-none"></nav>
+
+<!-- ===================== FEATURE WARNING BANNER (hidden unless a CDN lib fails) ===================== -->
+<div id="lib-warning" class="hidden flex-none px-3 py-1.5 text-xs border-b border-hairline" style="background:var(--warn); color:#1a1400;"></div>
+
+<!-- ===================== MAIN AREA ===================== -->
+<div class="flex flex-1 min-h-0 relative">
+  <div id="tree-drawer-backdrop"></div>
+
+  <section id="tree-pane" class="surface border-r border-hairline flex flex-col min-h-0" style="width:320px;" aria-label="Document tree">
+    <div class="flex items-center justify-between px-2 py-1.5 border-b border-hairline flex-none md:hidden">
+      <span class="text-xs font-medium text-muted">Tree</span>
+      <button id="drawer-close" class="btn btn-icon !p-1" aria-label="Close tree"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </div>
+    <div id="tree-scroll" class="flex-1 min-h-0 p-2">
+      <ul id="tree-root" role="tree" aria-label="JSON/YAML document" class="text-sm"></ul>
+    </div>
+  </section>
+
+  <div id="resize-handle" role="separator" aria-orientation="vertical" aria-label="Resize tree pane" tabindex="0"></div>
+
+  <section id="detail-pane" class="flex-1 min-h-0 overflow-auto p-4" aria-label="Node editor" aria-live="polite">
+    <!-- populated by renderDetail() -->
+  </section>
+</div>
+
+<!-- ===================== TOASTS ===================== -->
+<div id="toast-region" aria-live="assertive" class="fixed bottom-4 right-4 flex flex-col gap-2 z-50"></div>
+
+<!-- ===================== OPEN DIALOG ===================== -->
+<dialog id="open-dialog">
+  <div class="p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-semibold text-sm">Open a document</h2>
+      <button id="open-dialog-close" class="btn btn-icon !p-1" aria-label="Close dialog"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </div>
+    <div id="dropzone" class="dropzone mb-3" tabindex="0" role="button" aria-label="Drop a file here, or press Enter to browse">
+      <i class="fa-solid fa-cloud-arrow-up text-lg mb-1" aria-hidden="true"></i>
+      <div>Drag a .json or .yaml file here, or click to browse</div>
+      <input id="file-input" type="file" accept=".json,.yaml,.yml,application/json,text/yaml" class="hidden">
+    </div>
+    <label for="paste-area" class="text-xs text-muted block mb-1">…or paste JSON/YAML text</label>
+    <textarea id="paste-area" class="input mono mb-2" rows="4" placeholder="{ &quot;hello&quot;: &quot;world&quot; }"></textarea>
+    <div id="paste-error" class="text-xs mb-2 hidden" style="color:var(--danger)" aria-live="assertive"></div>
+    <div class="flex items-center justify-between gap-2">
+      <button id="btn-load-sample" class="btn text-xs"><i class="fa-solid fa-flask" aria-hidden="true"></i> Load sample file</button>
+      <button id="btn-load-paste" class="btn btn-accent text-xs">Load pasted text</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+/* =====================================================================
+   SECTION 1 — CONFIG & CONSTANTS
+   ===================================================================== */
+const DB_NAME = 'jye-db', DB_STORE = 'documents', DB_KEY = 'current';
+const LS_THEME = 'jye:theme', LS_SEARCH_MODE = 'jye:searchMode', LS_PANE_WIDTH = 'jye:paneWidth';
+const BREAKPOINT = 768;
+const TYPE_ICON = {
+  object: 'fa-solid fa-code', array: 'fa-solid fa-list-ol',
+  string: 'fa-solid fa-quote-right', number: 'fa-solid fa-hashtag',
+  boolean: 'fa-solid fa-toggle-on', null: 'fa-solid fa-ban'
+};
+const TYPE_BADGE_CLASS = {
+  object: 'badge-object', array: 'badge-array', string: 'badge-string',
+  number: 'badge-number', boolean: 'badge-boolean', null: 'badge-null'
+};
+
+const SAMPLE_DOC = {
+  name: "Sample company",
+  founded: 2014,
+  active: true,
+  notes: null,
+  hq: { name: "Riverside Tower", address: { street: "12 Quay Street", city: "Bristol", zip: "BS1 4AA" } },
+  tags: ["logistics", "b2b", "green-energy"],
+  users: [
+    { id: "u-1", name: "Alice Ng", role: "admin", active: true, lastLogin: "2026-08-01T09:12:00Z" },
+    { id: "u-2", name: "Bilal Rahman", role: "editor", active: false, lastLogin: null },
+    { id: "u-3", role: "viewer", active: true }
+  ],
+  metrics: {
+    monthly: [120, 141, 98, 175, 190, 210],
+    uptime: 99.982,
+    incidents: []
+  },
+  deeply: { nested: { example: { for: { testing: { expand: { collapse: "you found me" } } } } } }
+};
+
+/* =====================================================================
+   SECTION 2 — STATE
+   ===================================================================== */
+const state = {
+  root: null,
+  format: 'json',
+  filename: 'untitled.json',
+  dirty: false,
+  selectedPath: [],
+  expanded: new Set(['[]']),
+  savedExpandedSnapshot: null,
+  search: { query: '', mode: 'both', matches: [], activeIndex: -1 },
+  paneWidth: 320,
+};
+
+/* =====================================================================
+   SECTION 3 — STORAGE (IndexedDB for the document, localStorage for settings)
+   ===================================================================== */
+let dbPromise = null;
+function openDb() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) return reject(new Error('IndexedDB unavailable'));
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return dbPromise;
+}
+async function idbSave(doc) {
+  try {
+    const db = await openDb();
+    await new Promise((res, rej) => {
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      tx.objectStore(DB_STORE).put(doc, DB_KEY);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+  } catch (e) { console.warn('Autosave failed:', e); }
+}
+async function idbLoad() {
+  try {
+    const db = await openDb();
+    return await new Promise((res, rej) => {
+      const tx = db.transaction(DB_STORE, 'readonly');
+      const r = tx.objectStore(DB_STORE).get(DB_KEY);
+      r.onsuccess = () => res(r.result || null);
+      r.onerror = () => rej(r.error);
+    });
+  } catch (e) { return null; }
+}
+
+/* =====================================================================
+   SECTION 4 — PARSE / SERIALIZE
+   ===================================================================== */
+function parseDocument(text, format) {
+  if (format === 'yaml') {
+    if (!window.jsyaml) throw new Error('The YAML library did not load, so YAML files can’t be opened. Try reloading the page, or use a .json file instead.');
+    return jsyaml.load(text);
+  }
+  return JSON.parse(text);
+}
+function serializeDocument(value, format) {
+  if (format === 'yaml') {
+    if (!window.jsyaml) throw new Error('The YAML library did not load, so export as YAML is unavailable. Try reloading the page, or export as .json instead.');
+    return jsyaml.dump(value, { lineWidth: 100 });
+  }
+  return JSON.stringify(value, null, 2);
+}
+function detectFormatFromName(name) {
+  return /\.ya?ml$/i.test(name) ? 'yaml' : 'json';
+}
+
+/* =====================================================================
+   SECTION 5 — PATH HELPERS & DATA MODEL
+   ===================================================================== */
+function pathKey(path) { return JSON.stringify(path); }
+function typeOf(v) {
+  if (v === null || v === undefined) return 'null';
+  if (Array.isArray(v)) return 'array';
+  const t = typeof v;
+  if (t === 'object') return 'object';
+  return t; // string | number | boolean
+}
+function getAtPath(root, path) {
+  let node = root;
+  for (const seg of path) node = node[seg];
+  return node;
+}
+function getParentAndKey(root, path) {
+  if (path.length === 0) return { parent: null, key: null };
+  const parentPath = path.slice(0, -1);
+  return { parent: getAtPath(root, parentPath), key: path[path.length - 1] };
+}
+function setAtPath(root, path, value) {
+  if (path.length === 0) { state.root = value; return; }
+  const { parent, key } = getParentAndKey(root, path);
+  parent[key] = value;
+}
+function deleteAtPath(root, path) {
+  const { parent, key } = getParentAndKey(root, path);
+  if (Array.isArray(parent)) parent.splice(key, 1);
+  else delete parent[key];
+}
+function defaultValueForType(type) {
+  switch (type) {
+    case 'object': return {};
+    case 'array': return [];
+    case 'string': return '';
+    case 'number': return 0;
+    case 'boolean': return false;
+    default: return null;
+  }
+}
+// Node label logic: object children named `name` or `id` (case-insensitive) override the key label.
+function computeDisplayLabel(value, fallbackKey) {
+  if (typeOf(value) !== 'object') return { label: String(fallbackKey), sub: null };
+  const keys = Object.keys(value);
+  const findKey = (want) => keys.find(k => k.toLowerCase() === want);
+  const nameKey = findKey('name');
+  const idKey = findKey('id');
+  const pick = nameKey !== undefined ? nameKey : idKey;
+  if (pick !== undefined) {
+    const v = value[pick];
+    if (typeOf(v) !== 'object' && typeOf(v) !== 'array') {
+      return { label: String(v), sub: String(fallbackKey) };
+    }
+  }
+  return { label: String(fallbackKey), sub: null };
+}
+
+/* =====================================================================
+   SECTION 6 — TREE RENDERING (ARIA tree pattern, lazy children)
+   ===================================================================== */
+const treeRootEl = document.getElementById('tree-root');
+let visibleItems = []; // flat list of {path, el} in document order, for keyboard nav
+
+function isExpanded(path) { return state.expanded.has(pathKey(path)); }
+function setExpanded(path, val) {
+  const k = pathKey(path);
+  if (val) state.expanded.add(k); else state.expanded.delete(k);
+}
+
+function nodeMatchesSearch(path) {
+  return state.search.query && state.search.matches.some(m => pathKey(m) === pathKey(path));
+}
+function isAncestorOfAMatch(path) {
+  if (!state.search.query) return false;
+  const pk = pathKey(path);
+  return state.search.matches.some(m => pathKey(m.slice(0, path.length)) === pk && m.length > path.length);
+}
+
+function highlightText(text, query) {
+  if (!query) return escapeHtml(text);
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return escapeHtml(text);
+  return escapeHtml(text.slice(0, idx)) + '<mark class="match">' + escapeHtml(text.slice(idx, idx + query.length)) + '</mark>' + escapeHtml(text.slice(idx + query.length));
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function buildTreeItem(value, key, path, level) {
+  const type = typeOf(value);
+  const isContainer = type === 'object' || type === 'array';
+  const li = document.createElement('li');
+  li.setAttribute('role', 'treeitem');
+  li.setAttribute('aria-level', String(level));
+  li.dataset.path = pathKey(path);
+  const selected = pathKey(path) === pathKey(state.selectedPath);
+  li.setAttribute('aria-selected', selected ? 'true' : 'false');
+  if (isContainer) li.setAttribute('aria-expanded', isExpanded(path) ? 'true' : 'false');
+  li.tabIndex = selected ? 0 : -1;
+
+  const row = document.createElement('div');
+  row.className = 'tree-row' + (selected ? ' selected' : '') + (state.search.query && !nodeMatchesSearch(path) && !isAncestorOfAMatch(path) ? ' dimmed' : '');
+
+  const toggle = document.createElement('span');
+  toggle.className = 'tree-toggle' + (isContainer ? '' : ' leaf');
+  if (isContainer) toggle.innerHTML = `<i class="fa-solid fa-chevron-${isExpanded(path) ? 'down' : 'right'}" aria-hidden="true"></i>`;
+  row.appendChild(toggle);
+
+  const icon = document.createElement('i');
+  icon.className = TYPE_ICON[type] + ' text-[11px]';
+  icon.style.color = 'var(--muted)';
+  icon.setAttribute('aria-hidden', 'true');
+  row.appendChild(icon);
+
+  const { label, sub } = computeDisplayLabel(value, key);
+  const labelEl = document.createElement('span');
+  labelEl.className = 'tree-label';
+  const q = state.search.mode !== 'values' ? state.search.query : '';
+  labelEl.innerHTML = highlightText(label, q) + (sub ? `<span class="tree-sub">(${escapeHtml(sub)})</span>` : '');
+  row.appendChild(labelEl);
+
+  if (!isContainer) {
+    const preview = document.createElement('span');
+    preview.className = 'tree-sub truncate';
+    const valStr = type === 'string' ? `"${value}"` : String(value);
+    const qv = state.search.mode !== 'keys' ? state.search.query : '';
+    preview.innerHTML = highlightText(valStr.length > 40 ? valStr.slice(0, 40) + '…' : valStr, qv);
+    row.appendChild(preview);
+  } else {
+    const count = document.createElement('span');
+    count.className = 'tree-sub';
+    const n = type === 'array' ? value.length : Object.keys(value).length;
+    count.textContent = type === 'array' ? `[${n}]` : `{${n}}`;
+    row.appendChild(count);
+  }
+
+  // Clicking the row selects it. Clicking the chevron toggles expand/collapse without
+  // changing selection — keeping these separate means re-selecting an already-open
+  // parent (e.g. to glance at its path) doesn't unexpectedly collapse it.
+  row.addEventListener('click', (e) => {
+    e.stopPropagation();
+    selectPath(path);
+    if (window.innerWidth < BREAKPOINT) closeDrawer();
+  });
+  if (isContainer) {
+    toggle.style.cursor = 'pointer';
+    toggle.setAttribute('role', 'button');
+    toggle.setAttribute('aria-label', (isExpanded(path) ? 'Collapse' : 'Expand') + ' ' + String(key));
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectPath(path);
+      setExpanded(path, !isExpanded(path));
+      renderTree();
+    });
+  }
+  li.appendChild(row);
+
+  // Record this item in document order BEFORE recursing into children, so the
+  // keyboard-nav list (visibleItems) matches on-screen top-to-bottom order —
+  // pushing after the recursive call put every node's children ahead of it.
+  visibleItems.push({ path, el: li });
+
+  if (isContainer && isExpanded(path)) {
+    const group = document.createElement('ul');
+    group.setAttribute('role', 'group');
+    const entries = type === 'array' ? value.map((v, i) => [i, v]) : Object.entries(value);
+    for (const [k, v] of entries) {
+      group.appendChild(buildTreeItem(v, k, path.concat([k]), level + 1));
+    }
+    li.appendChild(group);
+  }
+  return li;
+}
+
+function renderTree() {
+  visibleItems = [];
+  treeRootEl.innerHTML = '';
+  if (state.root === null || state.root === undefined) return;
+  treeRootEl.appendChild(buildTreeItem(state.root, 'root', [], 1));
+  updateSearchCountLabel();
+}
+
+/* Keyboard navigation: roving tabindex on the ARIA tree */
+treeRootEl.addEventListener('keydown', (e) => {
+  const currentLi = e.target.closest('[role="treeitem"]');
+  if (!currentLi) return;
+  let idx = visibleItems.findIndex(it => it.el === currentLi);
+  // Fall back to the selected path if the event's element is stale (e.g. focus hasn't
+  // caught up with a very recent re-render) rather than silently doing nothing.
+  if (idx === -1) idx = visibleItems.findIndex(it => pathKey(it.path) === pathKey(state.selectedPath));
+  if (idx === -1) return;
+  const path = JSON.parse(currentLi.dataset.path);
+  const type = typeOf(getAtPath(state.root, path));
+  const isContainer = type === 'object' || type === 'array';
+
+  switch (e.key) {
+    case 'ArrowDown':
+      e.preventDefault();
+      if (visibleItems[idx + 1]) focusItem(idx + 1);
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      if (visibleItems[idx - 1]) focusItem(idx - 1);
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      if (isContainer && !isExpanded(path)) { setExpanded(path, true); renderTree(); focusPath(path); }
+      else if (isContainer && visibleItems[idx + 1]) focusItem(idx + 1);
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      if (isContainer && isExpanded(path)) { setExpanded(path, false); renderTree(); focusPath(path); }
+      else if (path.length > 0) { focusPath(path.slice(0, -1)); }
+      break;
+    case 'Home':
+      e.preventDefault(); focusItem(0); break;
+    case 'End':
+      e.preventDefault(); focusItem(visibleItems.length - 1); break;
+    case 'Enter':
+    case ' ':
+      e.preventDefault();
+      selectPath(path);
+      if (isContainer) { setExpanded(path, !isExpanded(path)); renderTree(); focusPath(path); }
+      break;
+  }
+});
+function focusItem(idx) {
+  const it = visibleItems[idx];
+  if (!it) return;
+  selectPath(it.path);
+}
+// renderTree() builds the tree synchronously, so by the time selectPath() calls this,
+// the DOM already reflects the new state — no need to wait a frame (doing so caused
+// fast, repeated arrow-key presses to silently miss moves while a focus was still pending).
+function focusPath(path) {
+  const it = visibleItems.find(v => pathKey(v.path) === pathKey(path));
+  if (it) { it.el.tabIndex = 0; it.el.focus(); }
+}
+
+/* =====================================================================
+   SECTION 7 — SELECTION, BREADCRUMB, DETAIL PANEL
+   ===================================================================== */
+function selectPath(path) {
+  state.selectedPath = path;
+  // ensure ancestors are expanded so the item is visible
+  for (let i = 0; i < path.length; i++) setExpanded(path.slice(0, i), true);
+  renderTree();
+  renderBreadcrumb();
+  renderDetail();
+  focusPath(path);
+}
+
+function renderBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  bc.innerHTML = '';
+  const segments = [{ label: 'root', path: [] }];
+  let cur = [];
+  for (const seg of state.selectedPath) {
+    cur = cur.concat([seg]);
+    segments.push({ label: String(seg), path: cur.slice() });
+  }
+  segments.forEach((s, i) => {
+    if (i > 0) {
+      const sep = document.createElement('span');
+      sep.className = 'text-muted'; sep.textContent = '›'; sep.setAttribute('aria-hidden', 'true');
+      bc.appendChild(sep);
+    }
+    const btn = document.createElement('button');
+    btn.className = 'btn !border-0 !bg-transparent !px-1.5 !py-0.5 mono';
+    btn.textContent = s.label;
+    if (i === segments.length - 1) btn.setAttribute('aria-current', 'location');
+    btn.addEventListener('click', () => selectPath(s.path));
+    bc.appendChild(btn);
+  });
+}
+
+const detailPane = document.getElementById('detail-pane');
+
+function renderDetail() {
+  const path = state.selectedPath;
+  if (state.root === null || state.root === undefined) {
+    detailPane.innerHTML = emptyStateHtml();
+    return;
+  }
+  const value = getAtPath(state.root, path);
+  const type = typeOf(value);
+  const header = detailHeaderHtml(path, value, type);
+
+  detailPane.innerHTML = '';
+  detailPane.insertAdjacentHTML('beforeend', header);
+
+  if (type === 'object') renderObjectEditor(value, path);
+  else if (type === 'array') renderArrayEditor(value, path);
+  else renderScalarEditor(value, path, type);
+}
+
+function emptyStateHtml() {
+  return `<div class="h-full flex flex-col items-center justify-center text-center text-muted gap-2">
+    <i class="fa-regular fa-folder-open text-2xl" aria-hidden="true"></i>
+    <p>No document is open yet.</p>
+    <button id="empty-open-btn" class="btn btn-accent text-xs mt-1">Open a document</button>
+  </div>`;
+}
+
+function detailHeaderHtml(path, value, type) {
+  const count = type === 'object' ? Object.keys(value).length : (type === 'array' ? value.length : null);
+  return `
+  <div class="mb-4 pb-3 border-b border-hairline">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="badge ${TYPE_BADGE_CLASS[type]}"><i class="${TYPE_ICON[type]}" aria-hidden="true"></i> ${type}</span>
+      ${count !== null ? `<span class="badge">${count} ${type === 'array' ? 'items' : 'properties'}</span>` : ''}
+    </div>
+    <p class="mono text-xs text-muted mt-1.5 break-all">${escapeHtml(path.length ? 'root.' + path.join('.') : 'root')}</p>
+  </div>`;
+}
+
+/* ---- scalar editor ---- */
+function renderScalarEditor(value, path, type) {
+  const wrap = document.createElement('div');
+  wrap.className = 'space-y-3 max-w-md';
+
+  wrap.innerHTML = `
+    <div>
+      <label class="text-xs text-muted block mb-1" for="type-select">Type</label>
+      <select id="type-select" class="input">
+        ${['string','number','boolean','null'].map(t => `<option value="${t}" ${t===type?'selected':''}>${t}</option>`).join('')}
+      </select>
+    </div>
+    <div id="value-field-wrap">
+      <label class="text-xs text-muted block mb-1" for="value-field">Value</label>
+      <div id="value-field-slot"></div>
+      <p id="value-error" class="text-xs mt-1 hidden" style="color:var(--danger)" aria-live="assertive"></p>
+    </div>
+  `;
+  detailPane.appendChild(wrap);
+
+  const slot = wrap.querySelector('#value-field-slot');
+  renderValueField(slot, value, type, path);
+
+  wrap.querySelector('#type-select').addEventListener('change', (e) => {
+    const newType = e.target.value;
+    const converted = convertScalar(value, type, newType);
+    commitEdit(path, converted);
+  });
+
+  if (path.length > 0) addDeleteButton(wrap, path);
+}
+function renderValueField(slot, value, type, path) {
+  slot.innerHTML = '';
+  if (type === 'boolean') {
+    const sel = document.createElement('select');
+    sel.id = 'value-field'; sel.className = 'input';
+    sel.innerHTML = `<option value="true" ${value?'selected':''}>true</option><option value="false" ${!value?'selected':''}>false</option>`;
+    sel.addEventListener('change', () => commitEdit(path, sel.value === 'true'));
+    slot.appendChild(sel);
+  } else if (type === 'null') {
+    const p = document.createElement('p');
+    p.className = 'text-sm text-muted italic'; p.textContent = 'null — no value set.';
+    slot.appendChild(p);
+    const btn = document.createElement('button');
+    btn.className = 'btn text-xs mt-2'; btn.textContent = 'Set a value…';
+    btn.addEventListener('click', () => commitEdit(path, ''));
+    slot.appendChild(btn);
+  } else if (type === 'number') {
+    const inp = document.createElement('input');
+    inp.id = 'value-field'; inp.className = 'input mono'; inp.type = 'number'; inp.value = value;
+    inp.addEventListener('change', () => {
+      const n = Number(inp.value);
+      const err = document.getElementById('value-error');
+      if (Number.isNaN(n)) { err.textContent = 'That’s not a valid number.'; err.classList.remove('hidden'); inp.setAttribute('aria-invalid','true'); return; }
+      err.classList.add('hidden'); inp.removeAttribute('aria-invalid');
+      commitEdit(path, n);
+    });
+    slot.appendChild(inp);
+  } else {
+    const ta = document.createElement('textarea');
+    ta.id = 'value-field'; ta.className = 'input mono'; ta.rows = value && value.length > 60 ? 4 : 1;
+    ta.value = value;
+    ta.addEventListener('change', () => commitEdit(path, ta.value));
+    slot.appendChild(ta);
+  }
+}
+function convertScalar(value, fromType, toType) {
+  if (toType === 'string') return fromType === 'null' ? '' : String(value);
+  if (toType === 'number') { const n = Number(value); return Number.isNaN(n) ? 0 : n; }
+  if (toType === 'boolean') return !!value && value !== 'false';
+  return null;
+}
+
+/* ---- object editor ---- */
+function renderObjectEditor(obj, path) {
+  const wrap = document.createElement('div');
+  const keys = Object.keys(obj);
+  wrap.innerHTML = `<h3 class="text-xs font-semibold text-muted uppercase tracking-wide mb-2" style="letter-spacing:.03em">${keys.length ? 'Properties' : 'No properties yet'}</h3>`;
+  const list = document.createElement('div'); list.className = 'space-y-1.5';
+  keys.forEach((key) => list.appendChild(buildChildRow(obj[key], key, path.concat([key]), obj, key)));
+  wrap.appendChild(list);
+  wrap.appendChild(buildAddRow(path, 'object'));
+  detailPane.appendChild(wrap);
+  if (path.length > 0) addDeleteButton(wrap, path);
+}
+
+/* ---- array editor ---- */
+function renderArrayEditor(arr, path) {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<h3 class="text-xs font-semibold text-muted uppercase tracking-wide mb-2" style="letter-spacing:.03em">${arr.length ? 'Items' : 'No items yet'}</h3>`;
+  const list = document.createElement('div'); list.className = 'space-y-1.5';
+  arr.forEach((item, i) => list.appendChild(buildChildRow(item, i, path.concat([i]), arr, i, true)));
+  wrap.appendChild(list);
+  wrap.appendChild(buildAddRow(path, 'array'));
+  detailPane.appendChild(wrap);
+  if (path.length > 0) addDeleteButton(wrap, path);
+}
+
+function buildChildRow(value, keyOrIndex, childPath, container, indexInContainer, isArrayItem) {
+  const type = typeOf(value);
+  const row = document.createElement('div');
+  row.className = 'flex items-center gap-2 p-2 rounded-lg surface-2 border';
+
+  if (isArrayItem) {
+    const idx = document.createElement('span');
+    idx.className = 'mono text-xs text-muted w-6 flex-none'; idx.textContent = `[${keyOrIndex}]`;
+    row.appendChild(idx);
+  } else {
+    const keyInput = document.createElement('input');
+    keyInput.className = 'input mono !w-32 flex-none text-xs'; keyInput.value = keyOrIndex;
+    keyInput.setAttribute('aria-label', `Key name for ${keyOrIndex}`);
+    keyInput.addEventListener('change', () => renameKey(container, keyOrIndex, keyInput.value, childPath));
+    row.appendChild(keyInput);
+  }
+
+  const badge = document.createElement('span');
+  badge.className = `badge ${TYPE_BADGE_CLASS[type]} flex-none`;
+  badge.innerHTML = `<i class="${TYPE_ICON[type]}" aria-hidden="true"></i> ${type}`;
+  row.appendChild(badge);
+
+  const preview = document.createElement('button');
+  preview.className = 'flex-1 text-left text-xs truncate mono';
+  preview.style.color = 'var(--text)';
+  preview.textContent = previewFor(value, type);
+  preview.setAttribute('aria-label', `Open ${keyOrIndex}`);
+  preview.addEventListener('click', () => selectPath(childPath));
+  row.appendChild(preview);
+
+  if (isArrayItem) {
+    const up = iconButton('fa-solid fa-chevron-up', 'Move up', () => moveArrayItem(container, indexInContainer, -1, childPath.slice(0, -1)));
+    const down = iconButton('fa-solid fa-chevron-down', 'Move down', () => moveArrayItem(container, indexInContainer, 1, childPath.slice(0, -1)));
+    if (indexInContainer === 0) up.disabled = true;
+    if (indexInContainer === container.length - 1) down.disabled = true;
+    row.appendChild(up); row.appendChild(down);
+  }
+  const drill = iconButton('fa-solid fa-arrow-right', `Open ${keyOrIndex}`, () => selectPath(childPath));
+  row.appendChild(drill);
+  const del = iconButton('fa-solid fa-trash', `Delete ${keyOrIndex}`, () => deleteChild(childPath), true);
+  row.appendChild(del);
+  return row;
+}
+function iconButton(iconClass, label, onClick, danger) {
+  const b = document.createElement('button');
+  b.className = 'btn btn-icon !p-1.5' + (danger ? ' btn-danger' : '');
+  b.setAttribute('aria-label', label); b.title = label;
+  b.innerHTML = `<i class="${iconClass} text-xs" aria-hidden="true"></i>`;
+  b.addEventListener('click', onClick);
+  return b;
+}
+function previewFor(value, type) {
+  if (type === 'object') return `{${Object.keys(value).length} properties}`;
+  if (type === 'array') return `[${value.length} items]`;
+  if (type === 'string') return `"${value.length > 50 ? value.slice(0, 50) + '…' : value}"`;
+  return String(value);
+}
+
+function buildAddRow(path, containerType) {
+  const row = document.createElement('div');
+  row.className = 'flex items-center gap-2 mt-2 p-2 rounded-lg border border-dashed border-hairline';
+  let keyInput;
+  if (containerType === 'object') {
+    keyInput = document.createElement('input');
+    keyInput.className = 'input !w-32 flex-none text-xs'; keyInput.placeholder = 'key name';
+    keyInput.setAttribute('aria-label', 'New property key name');
+    row.appendChild(keyInput);
+  }
+  const typeSelect = document.createElement('select');
+  typeSelect.className = 'input !w-28 flex-none text-xs';
+  typeSelect.setAttribute('aria-label', 'New value type');
+  typeSelect.innerHTML = ['string','number','boolean','null','object','array'].map(t => `<option value="${t}">${t}</option>`).join('');
+  row.appendChild(typeSelect);
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn btn-accent text-xs'; addBtn.innerHTML = `<i class="fa-solid fa-plus" aria-hidden="true"></i> Add ${containerType === 'object' ? 'property' : 'item'}`;
+  addBtn.addEventListener('click', () => {
+    const value = defaultValueForType(typeSelect.value);
+    const container = getAtPath(state.root, path);
+    if (containerType === 'object') {
+      const key = (keyInput.value || '').trim();
+      if (!key) { keyInput.setAttribute('aria-invalid', 'true'); keyInput.focus(); return; }
+      if (Object.prototype.hasOwnProperty.call(container, key)) { keyInput.setAttribute('aria-invalid', 'true'); showToast('error', `“${key}” already exists on this object.`); return; }
+      container[key] = value;
+      markDirtyAndRefresh(path.concat([key]));
+    } else {
+      container.push(value);
+      markDirtyAndRefresh(path.concat([container.length - 1]));
+    }
+  });
+  row.appendChild(addBtn);
+  return row;
+}
+
+function addDeleteButton(wrap, path) {
+  const bar = document.createElement('div');
+  bar.className = 'mt-4 pt-3 border-t border-hairline';
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-danger text-xs';
+  btn.innerHTML = `<i class="fa-solid fa-trash" aria-hidden="true"></i> Delete this node`;
+  btn.addEventListener('click', () => deleteChild(path));
+  bar.appendChild(btn);
+  wrap.appendChild(bar);
+}
+
+/* ---- mutation handlers ---- */
+function commitEdit(path, newValue) {
+  setAtPath(state.root, path, newValue);
+  markDirtyAndRefresh(path);
+}
+function renameKey(container, oldKey, newKey, oldChildPath) {
+  newKey = newKey.trim();
+  if (!newKey || newKey === oldKey) { renderDetail(); return; }
+  if (Object.prototype.hasOwnProperty.call(container, newKey)) {
+    showToast('error', `“${newKey}” already exists on this object. Choose a different name.`);
+    renderDetail();
+    return;
+  }
+  const entries = Object.entries(container);
+  const rebuilt = {};
+  for (const [k, v] of entries) rebuilt[k === oldKey ? newKey : k] = v;
+  for (const k of Object.keys(container)) delete container[k];
+  Object.assign(container, rebuilt);
+  const newPath = oldChildPath.slice(0, -1).concat([newKey]);
+  markDirtyAndRefresh(newPath);
+}
+function moveArrayItem(arr, index, dir, containerPath) {
+  const j = index + dir;
+  if (j < 0 || j >= arr.length) return;
+  [arr[index], arr[j]] = [arr[j], arr[index]];
+  markDirtyAndRefresh(containerPath.concat([j]));
+}
+function deleteChild(path) {
+  const { key } = getParentAndKey(state.root, path);
+  if (!confirm(`Delete “${key}”? This can’t be undone.`)) return;
+  const parentPath = path.slice(0, -1);
+  deleteAtPath(state.root, path);
+  markDirtyAndRefresh(parentPath);
+}
+function markDirtyAndRefresh(selectPathAfter) {
+  state.dirty = true;
+  updateDirtyIndicator();
+  recomputeSearchMatches();
+  state.selectedPath = selectPathAfter;
+  renderTree();
+  renderBreadcrumb();
+  renderDetail();
+  scheduleAutosave();
+}
+let autosaveTimer = null;
+function scheduleAutosave() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    idbSave({ root: state.root, format: state.format, filename: state.filename });
+  }, 500);
+}
+
+/* =====================================================================
+   SECTION 8 — SEARCH / FILTER
+   ===================================================================== */
+const searchInput = document.getElementById('search-input');
+const searchModeSelect = document.getElementById('search-mode');
+const searchCountEl = document.getElementById('search-count');
+let searchDebounce = null;
+
+function walkAll(value, path, cb) {
+  cb(value, path);
+  const type = typeOf(value);
+  if (type === 'object') for (const [k, v] of Object.entries(value)) walkAll(v, path.concat([k]), cb);
+  else if (type === 'array') value.forEach((v, i) => walkAll(v, path.concat([i]), cb));
+}
+function recomputeSearchMatches() {
+  const q = state.search.query;
+  if (!q || state.root === null || state.root === undefined) { state.search.matches = []; return; }
+  const mode = state.search.mode;
+  const ql = q.toLowerCase();
+  const matches = [];
+  walkAll(state.root, [], (value, path) => {
+    const type = typeOf(value);
+    const keyLabel = path.length ? String(path[path.length - 1]) : 'root';
+    let hit = false;
+    if (mode !== 'values' && keyLabel.toLowerCase().includes(ql)) hit = true;
+    if (!hit && mode !== 'keys' && type !== 'object' && type !== 'array') {
+      if (String(value).toLowerCase().includes(ql)) hit = true;
+    }
+    if (hit) matches.push(path);
+  });
+  state.search.matches = matches;
+  if (state.search.activeIndex >= matches.length) state.search.activeIndex = matches.length ? 0 : -1;
+}
+function updateSearchCountLabel() {
+  const q = state.search.query;
+  if (!q) { searchCountEl.textContent = ''; return; }
+  const n = state.search.matches.length;
+  const i = state.search.activeIndex;
+  searchCountEl.textContent = n === 0 ? 'No matches' : `${i + 1} of ${n}`;
+}
+function applySearch(newQuery) {
+  const startingFresh = !state.search.query && newQuery;
+  const clearing = state.search.query && !newQuery;
+  if (startingFresh) state.savedExpandedSnapshot = new Set(state.expanded);
+  state.search.query = newQuery;
+  recomputeSearchMatches();
+  if (newQuery) {
+    for (const m of state.search.matches) for (let i = 0; i < m.length; i++) setExpanded(m.slice(0, i), true);
+    state.search.activeIndex = state.search.matches.length ? 0 : -1;
+    if (state.search.activeIndex >= 0) selectPath(state.search.matches[0]);
+  }
+  if (clearing && state.savedExpandedSnapshot) {
+    state.expanded = state.savedExpandedSnapshot;
+    state.savedExpandedSnapshot = null;
+  }
+  const hasQuery = !!newQuery;
+  document.getElementById('search-prev').classList.toggle('hidden', !hasQuery);
+  document.getElementById('search-next').classList.toggle('hidden', !hasQuery);
+  document.getElementById('search-clear').classList.toggle('hidden', !hasQuery);
+  renderTree();
+  renderBreadcrumb();
+}
+searchInput.addEventListener('input', (e) => {
+  clearTimeout(searchDebounce);
+  const val = e.target.value;
+  searchDebounce = setTimeout(() => applySearch(val), 200);
+});
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); jumpMatch(e.shiftKey ? -1 : 1); }
+});
+searchModeSelect.addEventListener('change', () => {
+  state.search.mode = searchModeSelect.value;
+  localStorage.setItem(LS_SEARCH_MODE, state.search.mode);
+  recomputeSearchMatches();
+  renderTree();
+});
+document.getElementById('search-next').addEventListener('click', () => jumpMatch(1));
+document.getElementById('search-prev').addEventListener('click', () => jumpMatch(-1));
+document.getElementById('search-clear').addEventListener('click', () => { searchInput.value = ''; applySearch(''); searchInput.focus(); });
+function jumpMatch(dir) {
+  const m = state.search.matches;
+  if (!m.length) return;
+  state.search.activeIndex = (state.search.activeIndex + dir + m.length) % m.length;
+  selectPath(m[state.search.activeIndex]);
+  updateSearchCountLabel();
+}
+
+/* =====================================================================
+   SECTION 9 — FILE I/O (open/new/export, drag & drop, paste, sample)
+   ===================================================================== */
+const openDialog = document.getElementById('open-dialog');
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+const pasteArea = document.getElementById('paste-area');
+const pasteError = document.getElementById('paste-error');
+
+document.getElementById('btn-open').addEventListener('click', () => { pasteError.classList.add('hidden'); pasteArea.value=''; openDialog.showModal(); });
+document.getElementById('open-dialog-close').addEventListener('click', () => openDialog.close());
+detailPane.addEventListener('click', (e) => { if (e.target.id === 'empty-open-btn') openDialog.showModal(); });
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+['dragenter','dragover'].forEach(evt => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add('drag'); }));
+['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+dropzone.addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+fileInput.addEventListener('change', () => { const f = fileInput.files[0]; if (f) loadFile(f); });
+
+function loadFile(file) {
+  const format = detectFormatFromName(file.name);
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const doc = parseDocument(reader.result, format);
+      applyNewDocument(doc, format, file.name);
+      openDialog.close();
+      showToast('success', `Opened ${file.name}.`);
+    } catch (err) {
+      showToast('error', `Couldn’t open ${file.name}: ${err.message}. Check the file is valid ${format.toUpperCase()}.`);
+    }
+  };
+  reader.onerror = () => showToast('error', `Couldn’t read ${file.name} from disk.`);
+  reader.readAsText(file);
+}
+document.getElementById('btn-load-paste').addEventListener('click', () => {
+  const text = pasteArea.value.trim();
+  if (!text) { pasteError.textContent = 'Paste some JSON or YAML text first.'; pasteError.classList.remove('hidden'); return; }
+  let doc, format = 'json';
+  try { doc = JSON.parse(text); }
+  catch (jsonErr) {
+    try { doc = parseDocument(text, 'yaml'); format = 'yaml'; }
+    catch (yamlErr) {
+      pasteError.textContent = `Couldn’t parse this as JSON or YAML: ${jsonErr.message}`;
+      pasteError.classList.remove('hidden');
+      return;
+    }
+  }
+  applyNewDocument(doc, format, 'pasted.' + format);
+  openDialog.close();
+  showToast('success', 'Loaded pasted document.');
+});
+document.getElementById('btn-load-sample').addEventListener('click', () => {
+  applyNewDocument(JSON.parse(JSON.stringify(SAMPLE_DOC)), 'json', 'sample.json');
+  openDialog.close();
+  showToast('success', 'Loaded the sample file.');
+});
+document.getElementById('btn-new').addEventListener('click', () => {
+  if (state.dirty && !confirm('Discard unsaved changes and start a new document?')) return;
+  applyNewDocument({}, 'json', 'untitled.json');
+});
+
+function applyNewDocument(doc, format, filename) {
+  state.root = doc;
+  state.format = format;
+  state.filename = filename;
+  state.dirty = false;
+  state.selectedPath = [];
+  state.expanded = new Set(['[]']);
+  state.search = { query: '', mode: state.search.mode, matches: [], activeIndex: -1 };
+  searchInput.value = '';
+  document.getElementById('search-prev').classList.add('hidden');
+  document.getElementById('search-next').classList.add('hidden');
+  document.getElementById('search-clear').classList.add('hidden');
+  document.getElementById('filename-label').textContent = filename;
+  document.getElementById('filename-label').title = filename;
+  updateDirtyIndicator();
+  renderTree();
+  renderBreadcrumb();
+  renderDetail();
+  idbSave({ root: state.root, format: state.format, filename: state.filename });
+}
+function updateDirtyIndicator() {
+  document.getElementById('dirty-indicator').classList.toggle('hidden', !state.dirty);
+  document.getElementById('dirty-indicator').classList.toggle('flex', state.dirty);
+}
+
+/* export */
+const exportBtn = document.getElementById('btn-export');
+const exportMenu = document.getElementById('export-menu');
+exportBtn.addEventListener('click', () => toggleMenu(exportBtn, exportMenu));
+exportMenu.querySelectorAll('.export-item').forEach(btn => btn.addEventListener('click', () => {
+  const format = btn.dataset.format;
+  try {
+    const text = serializeDocument(state.root, format);
+    const blob = new Blob([text], { type: format === 'yaml' ? 'text/yaml' : 'application/json' });
+    const a = document.createElement('a');
+    const base = state.filename.replace(/\.(json|ya?ml)$/i, '');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${base}.${format === 'yaml' ? 'yaml' : 'json'}`;
+    document.body.appendChild(a); a.click(); a.remove();
+    state.dirty = false;
+    updateDirtyIndicator();
+    showToast('success', `Exported as ${a.download}.`);
+  } catch (err) {
+    showToast('error', err.message);
+  }
+  closeMenu(exportMenu, exportBtn);
+}));
+
+/* =====================================================================
+   SECTION 10 — THEMING
+   ===================================================================== */
+const themeBtn = document.getElementById('btn-theme');
+const themeMenu = document.getElementById('theme-menu');
+themeBtn.addEventListener('click', () => toggleMenu(themeBtn, themeMenu));
+themeMenu.querySelectorAll('.theme-item').forEach(btn => btn.addEventListener('click', () => {
+  applyTheme(btn.dataset.theme);
+  closeMenu(themeMenu, themeBtn);
+}));
+function applyTheme(pref) {
+  localStorage.setItem(LS_THEME, pref);
+  const resolved = pref === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : pref;
+  document.documentElement.setAttribute('data-theme', resolved);
+  document.documentElement.setAttribute('data-theme-pref', pref);
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (localStorage.getItem(LS_THEME) === 'system') applyTheme('system');
+});
+
+/* generic menu helpers */
+function toggleMenu(btn, menu) {
+  const willOpen = menu.classList.contains('hidden');
+  document.querySelectorAll('[role="menu"]').forEach(m => m.classList.add('hidden'));
+  if (willOpen) { menu.classList.remove('hidden'); btn.setAttribute('aria-expanded', 'true'); }
+}
+function closeMenu(menu, btn) { menu.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); }
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('[role="menu"]:not(.hidden)').forEach(menu => {
+    if (!menu.contains(e.target) && menu.previousElementSibling !== e.target && !menu.parentElement.contains(e.target)) {
+      // close only if click was outside the menu's wrapper
+    }
+  });
+  if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target)) closeMenu(exportMenu, exportBtn);
+  if (!themeBtn.contains(e.target) && !themeMenu.contains(e.target)) closeMenu(themeMenu, themeBtn);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMenu(exportMenu, exportBtn); closeMenu(themeMenu, themeBtn); } });
+
+/* =====================================================================
+   SECTION 11 — RESPONSIVE DRAWER (mobile tree pane)
+   ===================================================================== */
+const treePane = document.getElementById('tree-pane');
+const drawerBackdrop = document.getElementById('tree-drawer-backdrop');
+document.getElementById('drawer-toggle').addEventListener('click', () => openDrawer());
+document.getElementById('drawer-close').addEventListener('click', () => closeDrawer());
+drawerBackdrop.addEventListener('click', () => closeDrawer());
+function openDrawer() {
+  treePane.classList.add('open'); drawerBackdrop.classList.add('open');
+  document.getElementById('drawer-toggle').setAttribute('aria-expanded', 'true');
+}
+function closeDrawer() {
+  treePane.classList.remove('open'); drawerBackdrop.classList.remove('open');
+  document.getElementById('drawer-toggle').setAttribute('aria-expanded', 'false');
+}
+
+/* resizable tree pane (desktop) */
+const resizeHandle = document.getElementById('resize-handle');
+let resizing = false;
+resizeHandle.addEventListener('mousedown', () => { resizing = true; resizeHandle.classList.add('dragging'); document.body.style.userSelect = 'none'; });
+window.addEventListener('mousemove', (e) => {
+  if (!resizing) return;
+  const w = Math.min(560, Math.max(200, e.clientX));
+  treePane.style.width = w + 'px';
+  state.paneWidth = w;
+});
+window.addEventListener('mouseup', () => {
+  if (!resizing) return;
+  resizing = false; resizeHandle.classList.remove('dragging'); document.body.style.userSelect = '';
+  localStorage.setItem(LS_PANE_WIDTH, String(state.paneWidth));
+});
+resizeHandle.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') { state.paneWidth = Math.max(200, state.paneWidth - 20); treePane.style.width = state.paneWidth + 'px'; }
+  if (e.key === 'ArrowRight') { state.paneWidth = Math.min(560, state.paneWidth + 20); treePane.style.width = state.paneWidth + 'px'; }
+  localStorage.setItem(LS_PANE_WIDTH, String(state.paneWidth));
+});
+
+/* =====================================================================
+   SECTION 12 — TOASTS
+   ===================================================================== */
+function showToast(kind, message) {
+  const region = document.getElementById('toast-region');
+  const el = document.createElement('div');
+  el.className = `toast ${kind}`;
+  el.innerHTML = `<i class="fa-solid ${kind === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}" aria-hidden="true"></i><span>${escapeHtml(message)}</span>`;
+  region.appendChild(el);
+  setTimeout(() => { el.style.transition = 'opacity .2s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 250); }, kind === 'error' ? 6000 : 3500);
+}
+
+/* =====================================================================
+   SECTION 13 — INIT
+   ===================================================================== */
+async function init() {
+  // restore settings
+  const savedMode = localStorage.getItem(LS_SEARCH_MODE);
+  if (savedMode) { state.search.mode = savedMode; searchModeSelect.value = savedMode; }
+  const savedWidth = parseInt(localStorage.getItem(LS_PANE_WIDTH) || '', 10);
+  if (savedWidth && window.innerWidth >= BREAKPOINT) { state.paneWidth = savedWidth; treePane.style.width = savedWidth + 'px'; }
+
+  // library load check
+  const missing = [];
+  if (window.__jyeMissing.includes('styling') || typeof tailwind === 'undefined') missing.push('visual styling');
+  if (window.__jyeMissing.includes('yaml') || !window.jsyaml) missing.push('YAML support (opening/exporting .yaml files)');
+  if (window.__jyeMissing.includes('icons') || !isFontAwesomeLoaded()) missing.push('icons');
+  if (missing.length) {
+    const banner = document.getElementById('lib-warning');
+    banner.textContent = `Some features couldn't load and are unavailable right now: ${missing.join(', ')}. Check your connection and reload to try again.`;
+    banner.classList.remove('hidden');
+  }
+
+  // restore last session, else start empty
+  const saved = await idbLoad();
+  if (saved && saved.root !== undefined) {
+    state.root = saved.root; state.format = saved.format || 'json'; state.filename = saved.filename || 'untitled.json';
+    document.getElementById('filename-label').textContent = state.filename;
+    showToast('success', 'Restored your last session.');
+  } else {
+    state.root = {};
+  }
+  renderTree();
+  renderBreadcrumb();
+  renderDetail();
+}
+function isFontAwesomeLoaded() {
+  const test = document.createElement('i');
+  test.className = 'fa-solid fa-check'; test.style.display = 'none';
+  document.body.appendChild(test);
+  const loaded = getComputedStyle(test, ':before').fontFamily.toLowerCase().includes('awesome') ||
+                 getComputedStyle(test).fontFamily.toLowerCase().includes('awesome');
+  test.remove();
+  return loaded;
+}
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
