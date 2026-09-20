@@ -9,6 +9,11 @@ url = '/turntile/'
 description = 'Match 3 with a twist'
 
 [[links]]
+title = 'Nodepad'
+url = '/nodepad/'
+description = 'A JSON/YAML Explorer.'
+
+[[links]]
 title = 'PixelZip'
 url = '/pixelzip/'
 description = 'Optimize images for the web and beyond'
