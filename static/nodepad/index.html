@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nodepad | A JSON/YAML Explorer</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>">
 
 <!-- Theme applied before first paint, to avoid a flash of the wrong theme -->
 <script>
@@ -29,8 +28,10 @@
 <!-- Libraries: Tailwind (Play CDN), Font Awesome (icon font), js-yaml (YAML parse/serialize) -->
 <script src="https://cdn.tailwindcss.com" onerror="window.__jyeMissing.push('styling')"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
       crossorigin="anonymous" referrerpolicy="no-referrer" onerror="window.__jyeMissing.push('icons')">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"
+        integrity="sha512-dIcRvKNMxU8v2FucnetSw77TW/vJ+iQGgLwvSl5s8fA5F9jsQNhP2t5A5dR9K4paTVnI8y+d7z1p4wSjTBiRXQ=="
         crossorigin="anonymous" referrerpolicy="no-referrer" onerror="window.__jyeMissing.push('yaml')"></script>
 
 <style>
@@ -128,13 +129,19 @@
   }
   .tree-row:hover { background: var(--surface-2); }
   .tree-row.selected { background: var(--accent); color: var(--accent-text); }
-  .tree-row.selected .text-muted { color: var(--accent-text); opacity: .8; }
+  /* Muted elements (icon, count, preview, sub-label) must switch to a color that stays
+     readable against the accent background — the previous rule targeted the wrong
+     class and the icon's color was an inline style, so neither actually applied,
+     leaving low-contrast muted-on-accent text on a selected row. */
+  .tree-row.selected .tree-sub,
+  .tree-row.selected .tree-icon { color: var(--accent-text); opacity: 1; }
   .tree-row.dimmed { opacity: .35; }
   .tree-toggle {
     width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center;
     flex: none; color: var(--muted); font-size: 10px;
   }
   .tree-toggle.leaf { visibility: hidden; }
+  .tree-icon { color: var(--muted); }
   .tree-label { overflow: hidden; text-overflow: ellipsis; }
   .tree-sub { color: var(--muted); font-size: 11px; margin-left: .25rem; }
   mark.match { background: var(--warn); color: #1a1400; border-radius: 2px; padding: 0 1px; }
@@ -534,8 +541,7 @@ function buildTreeItem(value, key, path, level) {
   row.appendChild(toggle);
 
   const icon = document.createElement('i');
-  icon.className = TYPE_ICON[type] + ' text-[11px]';
-  icon.style.color = 'var(--muted)';
+  icon.className = TYPE_ICON[type] + ' tree-icon text-[11px]';
   icon.setAttribute('aria-hidden', 'true');
   row.appendChild(icon);
 
