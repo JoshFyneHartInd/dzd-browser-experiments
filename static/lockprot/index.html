@@ -311,12 +311,20 @@
   </main>
 
 <script>
-  const WORDS = ["FIREWALL","ENCRYPTION","MALWARE","ROOTKIT","PAYLOAD","BACKDOOR","PHISHING",
+  /*const WORDS = ["FIREWALL","ENCRYPTION","MALWARE","ROOTKIT","PAYLOAD","BACKDOOR","PHISHING",
     "KEYLOGGER","BOTNET","RANSOMWARE","SPYWARE","TROJAN","EXPLOIT","VULNERABILITY","CIPHER",
     "PROTOCOL","GATEWAY","DATABASE","NETWORK","SERVER","TERMINAL","MAINFRAME","BANDWIDTH",
     "PACKET","ROUTER","PROXY","DARKWEB","BREACH","INTRUSION","SANDBOX","QUARANTINE",
     "CREDENTIALS","AUTHENTICATION","OVERRIDE","SHUTDOWN","SUBROUTINE","ALGORITHM","BINARY",
-    "CIRCUIT","MODULE"];
+    "CIRCUIT","MODULE"];*/
+  const WORDS = fetch('words.txt')
+    .then(response => {
+      if (!response.ok) throw new Error('Unable to load words.txt');
+      return response.text();
+    })
+    .then(text => text.split(/\r?\n/)
+      .map(word => word.trim().toUpperCase())
+      .filter(Boolean));
 
   const MAX_WRONG = 6;
 
@@ -489,8 +497,9 @@
     }, reduceMotion ? 300 : 1500);
   }
 
-  function newGame() {
-    state.word = WORDS[Math.floor(Math.random() * WORDS.length)];
+  async function newGame() {
+    const words = await WORDS;
+    state.word = words[Math.floor(Math.random() * words.length)];
     state.guessed = new Set();
     state.wrong = 0;
     state.screen = 'game';
