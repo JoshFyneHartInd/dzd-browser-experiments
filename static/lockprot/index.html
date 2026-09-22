@@ -461,9 +461,9 @@
       u: 1, v: 4, w: 4, x: 8, y: 4, z: 10
     };
     const wordLength = state.word.length;
-    const wordScore = [...state.word].reduce((sum, ch) => sum + (LETTER_VALUES[ch.toLowerCase()] || 0), 0) * 10;
+    const wordScore = [...state.word].reduce((sum, ch) => sum + (LETTER_VALUES[ch.toLowerCase()] || 0), 0) * 100;
     const uniqueLetters = new Set(state.word).size;
-    const uniqueScore = (uniqueLetters / wordLength) * 100;
+    const uniqueScore = (uniqueLetters / wordLength) * 1000;
     const base = Math.round(uniqueScore + wordScore);
     const remaining = MAX_WRONG - state.wrong;
     const multiplier = 1 + remaining * 0.2;
