@@ -280,7 +280,8 @@
             <h2 class="text-xl sm:text-2xl font-extrabold tracking-wide" style="color:var(--success)">ACCESS GRANTED</h2>
             <p class="text-sm text-[var(--muted)]">Decrypted sequence: <span id="winWord" class="font-bold text-[var(--text)]"></span></p>
             <div class="text-left max-w-xs mx-auto text-sm space-y-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded p-4">
-              <div class="flex justify-between"><span class="text-[var(--muted)]">Unique letters</span><span id="winUnique"></span></div>
+              <div class="flex justify-between"><span class="text-[var(--muted)]">Word Score</span><span id="winWordScore"></span></div>
+              <div class="flex justify-between"><span class="text-[var(--muted)]">Uniqueness score</span><span id="winUniqueScore"></span></div>
               <div class="flex justify-between"><span class="text-[var(--muted)]">Base points</span><span id="winBase"></span></div>
               <div class="flex justify-between"><span class="text-[var(--muted)]">Misses remaining</span><span id="winRemaining"></span></div>
               <div class="flex justify-between"><span class="text-[var(--muted)]">Multiplier</span><span id="winMultiplier"></span></div>
@@ -459,17 +460,18 @@
       k: 5, l: 1, m: 3, n: 1, o: 1, p: 3, q: 10, r: 1, s: 1, t: 1,
       u: 1, v: 4, w: 4, x: 8, y: 4, z: 10
     };
+    const wordLength = state.word.length;
     const wordScore = [...state.word].reduce((sum, ch) => sum + (LETTER_VALUES[ch.toLowerCase()] || 0), 0) * 10;
-    console.log('Word score:', wordScore);
-    console.log('Word score calculation:', [...state.word].map(ch => LETTER_VALUES[ch.toLowerCase()] || 0).join(' + '), '=', wordScore);
     const uniqueLetters = new Set(state.word).size;
-    const base = uniqueLetters * 100;
+    const uniqueScore = (uniqueLetters / wordLength) * 100;
+    const base = uniqueScore + wordScore;
     const remaining = MAX_WRONG - state.wrong;
     const multiplier = 1 + remaining * 0.2;
     const final = Math.round(base * multiplier);
 
     el('winWord').textContent = state.word;
-    el('winUnique').textContent = uniqueLetters;
+    el('winWordScore').textContent = wordScore;
+    el('winUniqueScore').textContent = uniqueScore;
     el('winBase').textContent = base;
     el('winRemaining').textContent = remaining;
     el('winMultiplier').textContent = multiplier.toFixed(1) + 'x';
