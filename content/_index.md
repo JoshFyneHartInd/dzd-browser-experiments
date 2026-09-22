@@ -9,9 +9,14 @@ url = '/turntile/'
 description = 'Match 3 with a twist'
 
 [[links]]
+title = 'Lockout Protocol'
+url = '/lockprot/'
+description = 'Crack the code before you get locked out'
+
+[[links]]
 title = 'Nodepad'
 url = '/nodepad/'
-description = 'A JSON/YAML Explorer.'
+description = 'A JSON/YAML Explorer'
 
 [[links]]
 title = 'PixelZip'
