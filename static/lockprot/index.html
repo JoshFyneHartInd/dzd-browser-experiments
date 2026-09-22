@@ -509,7 +509,14 @@
 
   async function newGame() {
     const words = await WORDS;
-    state.word = words[Math.floor(Math.random() * words.length)];
+    // If query string container stest=<word>, use that word for testing
+    const urlParams = new URLSearchParams(window.location.search);
+    const testWord = urlParams.get('stest');
+    if (testWord && words.includes(testWord.toUpperCase())) {
+      state.word = testWord.toUpperCase();
+    } else {
+      state.word = words[Math.floor(Math.random() * words.length)];
+    }
     state.guessed = new Set();
     state.wrong = 0;
     state.screen = 'game';
