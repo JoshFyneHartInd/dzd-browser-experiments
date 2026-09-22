@@ -117,7 +117,7 @@
         <option value="matrix">Matrix</option>
         <option value="synthwave">Synthwave</option>
         <option value="terminal">Terminal</option>
-        <option value="blood">Blood Terminal</option>
+        <option value="blood">Dracula</option>
         <option value="ghost">Ghost</option>
       </select>
     </div>
@@ -137,11 +137,12 @@
         <section id="screen-start">
           <div class="text-center space-y-5">
             <p class="text-xs sm:text-sm text-[var(--muted)] leading-relaxed max-w-md mx-auto">
-              A target string sits encrypted behind masked characters. Guess letters, or submit the full sequence, before six failed attempts trigger lockout.
+              A target string sits encrypted behind masked characters. Decode it before six failed attempts trigger a lockout.
             </p>
             <ul class="text-xs sm:text-sm text-left max-w-sm mx-auto space-y-1.5 list-none">
-              <li><i class="fa-solid fa-chevron-right text-[var(--accent)] mr-2"></i>Click letters, type on your keyboard, or guess the full word</li>
-              <li><i class="fa-solid fa-chevron-right text-[var(--accent)] mr-2"></i>6 wrong attempts total (letters + full-word misses combined)</li>
+              <li><i class="fa-solid fa-chevron-right text-[var(--accent)] mr-2"></i>Click letters or type on your keyboard</li>
+              <li><i class="fa-solid fa-chevron-right text-[var(--accent)] mr-2"></i>Guess the word anytime</li>
+              <li><i class="fa-solid fa-chevron-right text-[var(--accent)] mr-2"></i>6 wrong attempts total</li>
               <li><i class="fa-solid fa-chevron-right text-[var(--accent)] mr-2"></i>Harder words and fewer misses score higher</li>
             </ul>
             <button id="startBtn" class="mt-2 px-6 py-3 bg-[var(--accent)] text-[var(--accent-text)] font-bold rounded tracking-wide hover:opacity-90 active:scale-95 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] outline-none">
