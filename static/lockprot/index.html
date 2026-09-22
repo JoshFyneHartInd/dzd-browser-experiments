@@ -35,6 +35,11 @@
     --text:#1b1f23; --muted:#6b7280; --accent:#111827; --accent-text:#ffffff;
     --danger:#c81e35; --success:#157a45; --warn:#9a6b12; --focus:#2563eb;
   }
+  :root[data-theme="nord"] {
+    --bg: #2e3440; --surface: #2e3440; --surface-2: #3b4252; --border: #434c5e;
+    --text: #eceff4; --muted: #81a1c1; --accent: #88c0d0; --accent-text: #2e3440;
+    --danger: #bf616a; --success: #a3be8c; --warn: #ebcb8b; --focus: #88c0d0;
+  }
 
   * { box-sizing: border-box; }
   html { scroll-padding-top: env(safe-area-inset-top, 0px); }
@@ -119,6 +124,7 @@
         <option value="terminal">Terminal</option>
         <option value="blood">Dracula</option>
         <option value="ghost">Ghost</option>
+        <option value="nord">Nord</option>
       </select>
     </div>
   </header>
