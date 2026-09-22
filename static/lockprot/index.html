@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="matrix">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lockout Protocol</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root, [data-theme="matrix"] {
+    --bg:#020803; --surface:#04140a; --surface-2:#0a2415; --border:#1c4d2e;
+    --text:#c9ffd8; --muted:#5f9c74; --accent:#39ff6a; --accent-text:#03150a;
+    --danger:#ff3b3b; --success:#39ff6a; --warn:#e8ff3b; --focus:#8dffb0;
+  }
+  [data-theme="synthwave"] {
+    --bg:#170822; --surface:#200f33; --surface-2:#2c1447; --border:#5a2c82;
+    --text:#f5e8ff; --muted:#b98fd8; --accent:#ff2fd6; --accent-text:#1a0620;
+    --danger:#ff4d6d; --success:#39ffb0; --warn:#ffe135; --focus:#2fe8ff;
+  }
+  [data-theme="terminal"] {
+    --bg:#0a0700; --surface:#161000; --surface-2:#221800; --border:#4d3800;
+    --text:#ffce6b; --muted:#a67f34; --accent:#ffb000; --accent-text:#160f00;
+    --danger:#ff4d3d; --success:#8bff5a; --warn:#fff45a; --focus:#ffd27a;
+  }
+  [data-theme="blood"] {
+    --bg:#0a0000; --surface:#160303; --surface-2:#220505; --border:#5c0f0f;
+    --text:#ffd6d6; --muted:#b06666; --accent:#ff3355; --accent-text:#160303;
+    --danger:#ff0022; --success:#7cff6b; --warn:#ffb020; --focus:#ff8fa3;
+  }
+  [data-theme="ghost"] {
+    --bg:#eef0f2; --surface:#ffffff; --surface-2:#e4e7eb; --border:#c7ccd1;
+    --text:#1b1f23; --muted:#6b7280; --accent:#111827; --accent-text:#ffffff;
+    --danger:#c81e35; --success:#157a45; --warn:#9a6b12; --focus:#2563eb;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100%;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    position: relative;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.06) 0px,
+      rgba(0,0,0,0.06) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode: overlay;
+    opacity: 0.5;
+    z-index: 50;
+  }
+  .hidden { display: none !important; }
+
+  @keyframes glitchShake {
+    0%, 100% { transform: translate(0,0); }
+    10% { transform: translate(-6px, 2px); }
+    20% { transform: translate(5px, -3px); }
+    30% { transform: translate(-4px, 4px); }
+    40% { transform: translate(6px, 1px); }
+    50% { transform: translate(-3px, -4px); }
+    60% { transform: translate(4px, 3px); }
+    70% { transform: translate(-5px, -2px); }
+    80% { transform: translate(3px, 2px); }
+    90% { transform: translate(-2px, -1px); }
+  }
+  .glitch-shake { animation: glitchShake 0.5s linear 0s 3; }
+
+  @keyframes glitchRgb {
+    0% { text-shadow: 2px 0 var(--danger), -2px 0 var(--focus); }
+    50% { text-shadow: -2px 0 var(--danger), 2px 0 var(--focus); }
+    100% { text-shadow: 2px 0 var(--danger), -2px 0 var(--focus); }
+  }
+  .glitch-text { animation: glitchRgb 0.15s infinite steps(2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glitch-shake, .glitch-text { animation: none !important; }
+  }
+
+  .letter-box {
+    width: clamp(1.6rem, 6.5vw, 2.4rem);
+    height: 2.5rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 3px;
+    font-size: clamp(1rem, 4vw, 1.5rem);
+    font-weight: 800;
+    border-bottom: 3px solid var(--border);
+    color: var(--text);
+  }
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <header class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[var(--border)] relative z-10">
+    <div class="flex items-center gap-2 sm:gap-3">
+      <i class="fa-solid fa-terminal text-[var(--accent)] text-lg sm:text-xl"></i>
+      <h1 class="text-sm sm:text-lg font-extrabold tracking-wide">LOCKOUT PROTOCOL</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <label for="themeSelect" class="hidden sm:inline text-xs text-[var(--muted)]">skin</label>
+      <select id="themeSelect" class="bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] rounded px-2 py-1.5 text-xs sm:text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] outline-none">
+        <option value="matrix">Matrix</option>
+        <option value="synthwave">Synthwave</option>
+        <option value="terminal">Terminal</option>
+        <option value="blood">Blood Terminal</option>
+        <option value="ghost">Ghost</option>
+      </select>
+    </div>
+  </header>
+
+  <main class="flex-1 flex items-start sm:items-center justify-center px-3 sm:px-6 py-6 relative z-10">
+    <div id="panel" class="w-full max-w-2xl bg-[var(--surface)] border border-[var(--border)] rounded-md overflow-hidden">
+      <div class="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--surface-2)]">
+        <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:var(--danger)"></span>
+        <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:var(--warn)"></span>
+        <span class="w-2.5 h-2.5 rounded-full inline-block" style="background:var(--success)"></span>
+        <span class="ml-2 text-xs text-[var(--muted)]">session://lockout-protocol</span>
+      </div>
+
+      <div class="p-5 sm:p-8">
+
+        <section id="screen-start">
+          <div class="text-center space-y-5">
+            <p class="text-xs sm:text-sm text-[var(--muted)] leading-relaxed max-w-md mx-auto">
+              A target string sits encrypted behind masked characters. Guess letters, or submit the full sequence, before six failed attempts trigger lockout.
+            </p>
+            <ul class="text-xs sm:text-sm text-left max-w-sm mx-auto space-y-1.5 list-none">
+              <li><i class="fa-solid fa-chevron-right text-[var(--accent)] mr-2"></i>Click letters, type on your keyboard, or guess the full word</li>
+              <li><i class="fa-solid fa-chevron-right text-[var(--accent)] mr-2"></i>6 wrong attempts total (letters + full-word misses combined)</li>
+              <li><i class="fa-solid fa-chevron-right text-[var(--accent)] mr-2"></i>Harder words and fewer misses score higher</li>
+            </ul>
+            <button id="startBtn" class="mt-2 px-6 py-3 bg-[var(--accent)] text-[var(--accent-text)] font-bold rounded tracking-wide hover:opacity-90 active:scale-95 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] outline-none">
+              <i class="fa-solid fa-unlock mr-2"></i>INITIATE BREACH
+            </button>
+          </div>
+        </section>
+
+        <section id="screen-game" class="hidden">
+          <div class="space-y-5">
+            <div class="flex items-center justify-between text-xs sm:text-sm">
+              <span class="text-[var(--muted)]">FAILED ATTEMPTS</span>
+              <span id="wrongCount" class="font-bold">0 / 6</span>
+            </div>
+            <div id="trace" class="flex gap-1.5"></div>
+            <div id="mask" class="flex flex-wrap justify-center gap-1.5 sm:gap-2 py-4"></div>
+            <div id="keyboard" class="grid grid-cols-7 sm:grid-cols-9 gap-1.5 sm:gap-2 justify-items-center"></div>
+            <div class="pt-4 border-t border-[var(--border)] flex flex-col sm:flex-row sm:items-center gap-2">
+              <span class="text-xs text-[var(--muted)] sm:mr-2 whitespace-nowrap">FULL SEQUENCE</span>
+              <div class="flex gap-2 w-full">
+                <input id="wordInput" type="text" autocomplete="off" spellcheck="false" placeholder="ENTER FULL WORD"
+                  class="flex-1 bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 rounded text-sm uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] outline-none" />
+                <button id="submitWordBtn" class="px-4 py-2 bg-[var(--surface-2)] border border-[var(--border)] rounded text-sm hover:bg-[var(--accent)] hover:text-[var(--accent-text)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] outline-none">
+                  <i class="fa-solid fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="screen-win" class="hidden">
+          <div class="text-center space-y-4">
+            <i class="fa-solid fa-shield-halved text-4xl" style="color:var(--success)"></i>
+            <h2 class="text-xl sm:text-2xl font-extrabold tracking-wide" style="color:var(--success)">ACCESS GRANTED</h2>
+            <p class="text-sm text-[var(--muted)]">Decrypted sequence: <span id="winWord" class="font-bold text-[var(--text)]"></span></p>
+            <div class="text-left max-w-xs mx-auto text-sm space-y-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded p-4">
+              <div class="flex justify-between"><span class="text-[var(--muted)]">Unique letters</span><span id="winUnique"></span></div>
+              <div class="flex justify-between"><span class="text-[var(--muted)]">Base points</span><span id="winBase"></span></div>
+              <div class="flex justify-between"><span class="text-[var(--muted)]">Misses remaining</span><span id="winRemaining"></span></div>
+              <div class="flex justify-between"><span class="text-[var(--muted)]">Multiplier</span><span id="winMultiplier"></span></div>
+              <div class="flex justify-between pt-2 mt-1 border-t border-[var(--border)] font-bold">
+                <span>FINAL SCORE</span><span id="winFinal" style="color:var(--accent)"></span>
+              </div>
+            </div>
+            <button id="playAgainBtn" class="px-6 py-3 bg-[var(--accent)] text-[var(--accent-text)] font-bold rounded tracking-wide hover:opacity-90 active:scale-95 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] outline-none">
+              <i class="fa-solid fa-rotate-right mr-2"></i>NEW SESSION
+            </button>
+          </div>
+        </section>
+
+        <section id="screen-loss" class="hidden">
+          <div class="text-center space-y-4">
+            <i class="fa-solid fa-skull-crossbones text-4xl" style="color:var(--danger)"></i>
+            <h2 class="text-xl sm:text-2xl font-extrabold tracking-wide" style="color:var(--danger)">ACCESS DENIED</h2>
+            <p class="text-sm text-[var(--muted)]">Correct sequence was: <span id="lossWord" class="font-bold text-[var(--text)]"></span></p>
+            <p class="text-xs text-[var(--muted)]">Failed attempts: <span id="lossWrong"></span></p>
+            <button id="retryBtn" class="px-6 py-3 font-bold rounded tracking-wide hover:opacity-90 active:scale-95 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] outline-none" style="background:var(--danger); color:var(--bg)">
+              <i class="fa-solid fa-rotate-right mr-2"></i>RETRY BREACH
+            </button>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+<script>
+  const WORDS = ["FIREWALL","ENCRYPTION","MALWARE","ROOTKIT","PAYLOAD","BACKDOOR","PHISHING",
+    "KEYLOGGER","BOTNET","RANSOMWARE","SPYWARE","TROJAN","EXPLOIT","VULNERABILITY","CIPHER",
+    "PROTOCOL","GATEWAY","DATABASE","NETWORK","SERVER","TERMINAL","MAINFRAME","BANDWIDTH",
+    "PACKET","ROUTER","PROXY","DARKWEB","BREACH","INTRUSION","SANDBOX","QUARANTINE",
+    "CREDENTIALS","AUTHENTICATION","OVERRIDE","SHUTDOWN","SUBROUTINE","ALGORITHM","BINARY",
+    "CIRCUIT","MODULE"];
+
+  const MAX_WRONG = 6;
+
+  const state = { word: '', guessed: new Set(), wrong: 0, screen: 'start' };
+
+  const el = (id) => document.getElementById(id);
+  const themeSelect = el('themeSelect');
+  const startBtn = el('startBtn');
+  const playAgainBtn = el('playAgainBtn');
+  const retryBtn = el('retryBtn');
+  const wrongCountEl = el('wrongCount');
+  const traceEl = el('trace');
+  const maskEl = el('mask');
+  const kbEl = el('keyboard');
+  const wordInput = el('wordInput');
+  const submitWordBtn = el('submitWordBtn');
+  const panelEl = el('panel');
+
+  themeSelect.addEventListener('change', () => {
+    document.documentElement.setAttribute('data-theme', themeSelect.value);
+  });
+
+  function showScreen(name) {
+    ['start', 'game', 'win', 'loss'].forEach(s => {
+      el('screen-' + s).classList.toggle('hidden', s !== name);
+    });
+  }
+
+  function buildTrace() {
+    traceEl.innerHTML = '';
+    for (let i = 0; i < MAX_WRONG; i++) {
+      const seg = document.createElement('div');
+      seg.className = 'trace-seg h-2 flex-1 rounded-sm border border-[var(--border)]';
+      seg.style.background = 'var(--surface-2)';
+      traceEl.appendChild(seg);
+    }
+  }
+
+  function updateTrace() {
+    const segs = traceEl.querySelectorAll('.trace-seg');
+    segs.forEach((seg, i) => {
+      seg.style.background = i < state.wrong ? 'var(--danger)' : 'var(--surface-2)';
+      seg.style.borderColor = i < state.wrong ? 'var(--danger)' : 'var(--border)';
+    });
+    wrongCountEl.textContent = state.wrong + ' / ' + MAX_WRONG;
+  }
+
+  function updateMask() {
+    maskEl.innerHTML = '';
+    for (const ch of state.word) {
+      const box = document.createElement('div');
+      box.className = 'letter-box';
+      box.textContent = state.guessed.has(ch) ? ch : '';
+      maskEl.appendChild(box);
+    }
+  }
+
+  function buildKeyboard() {
+    kbEl.innerHTML = '';
+    for (let i = 65; i <= 90; i++) {
+      const ch = String.fromCharCode(i);
+      const btn = document.createElement('button');
+      btn.textContent = ch;
+      btn.dataset.letter = ch;
+      btn.className = 'w-8 h-9 sm:w-9 sm:h-10 flex items-center justify-center border border-[var(--border)] rounded text-xs sm:text-sm font-bold transition active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] outline-none';
+      btn.style.background = 'var(--surface-2)';
+      btn.style.color = 'var(--text)';
+      btn.addEventListener('click', () => guessLetter(ch));
+      kbEl.appendChild(btn);
+    }
+  }
+
+  function setKeyState(ch, correct) {
+    const btn = kbEl.querySelector('[data-letter="' + ch + '"]');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.style.background = correct ? 'var(--success)' : 'var(--danger)';
+    btn.style.color = 'var(--bg)';
+    btn.style.borderColor = correct ? 'var(--success)' : 'var(--danger)';
+    btn.style.opacity = correct ? '1' : '.55';
+  }
+
+  function disableInputs() {
+    kbEl.querySelectorAll('button').forEach(b => b.disabled = true);
+    wordInput.disabled = true;
+    submitWordBtn.disabled = true;
+  }
+
+  function guessLetter(ch) {
+    if (state.screen !== 'game' || state.guessed.has(ch)) return;
+    state.guessed.add(ch);
+    if (state.word.includes(ch)) {
+      setKeyState(ch, true);
+      updateMask();
+      checkWin();
+    } else {
+      setKeyState(ch, false);
+      registerWrong();
+    }
+  }
+
+  function submitWordGuess() {
+    if (state.screen !== 'game') return;
+    const val = wordInput.value.trim().toUpperCase();
+    if (!val) return;
+    if (val === state.word) {
+      for (const ch of state.word) state.guessed.add(ch);
+      updateMask();
+      triggerWin();
+    } else {
+      wordInput.value = '';
+      registerWrong();
+    }
+  }
+
+  function registerWrong() {
+    state.wrong++;
+    updateTrace();
+    if (state.wrong >= MAX_WRONG) triggerLoss();
+  }
+
+  function checkWin() {
+    const complete = [...state.word].every(ch => state.guessed.has(ch));
+    if (complete) triggerWin();
+  }
+
+  function triggerWin() {
+    state.screen = 'win';
+    disableInputs();
+    const uniqueLetters = new Set(state.word).size;
+    const base = uniqueLetters * 100;
+    const remaining = MAX_WRONG - state.wrong;
+    const multiplier = 1 + remaining * 0.2;
+    const final = Math.round(base * multiplier);
+
+    el('winWord').textContent = state.word;
+    el('winUnique').textContent = uniqueLetters;
+    el('winBase').textContent = base;
+    el('winRemaining').textContent = remaining;
+    el('winMultiplier').textContent = multiplier.toFixed(1) + 'x';
+    el('winFinal').textContent = final;
+    showScreen('win');
+  }
+
+  function triggerLoss() {
+    state.screen = 'lockout';
+    disableInputs();
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const boxes = maskEl.querySelectorAll('.letter-box');
+    let scrambleId = null;
+
+    if (!reduceMotion) {
+      panelEl.classList.add('glitch-shake');
+      maskEl.classList.add('glitch-text');
+      scrambleId = setInterval(() => {
+        boxes.forEach(b => { b.textContent = letters[Math.floor(Math.random() * letters.length)]; });
+      }, 70);
+    }
+
+    setTimeout(() => {
+      if (scrambleId) clearInterval(scrambleId);
+      panelEl.classList.remove('glitch-shake');
+      maskEl.classList.remove('glitch-text');
+      state.screen = 'loss';
+      el('lossWord').textContent = state.word;
+      el('lossWrong').textContent = state.wrong + ' / ' + MAX_WRONG;
+      showScreen('loss');
+    }, reduceMotion ? 300 : 1500);
+  }
+
+  function newGame() {
+    state.word = WORDS[Math.floor(Math.random() * WORDS.length)];
+    state.guessed = new Set();
+    state.wrong = 0;
+    state.screen = 'game';
+    buildKeyboard();
+    buildTrace();
+    updateMask();
+    updateTrace();
+    wordInput.value = '';
+    wordInput.disabled = false;
+    submitWordBtn.disabled = false;
+    showScreen('game');
+  }
+
+  startBtn.addEventListener('click', newGame);
+  playAgainBtn.addEventListener('click', newGame);
+  retryBtn.addEventListener('click', newGame);
+  submitWordBtn.addEventListener('click', submitWordGuess);
+
+  document.addEventListener('keydown', (e) => {
+    if (state.screen !== 'game') return;
+    if (document.activeElement === wordInput) {
+      if (e.key === 'Enter') submitWordGuess();
+      return;
+    }
+    const k = e.key.toUpperCase();
+    if (k.length === 1 && k >= 'A' && k <= 'Z') guessLetter(k);
+  });
+
+  buildTrace();
+</script>
+</body>
+</html>
