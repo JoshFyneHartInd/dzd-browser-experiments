@@ -464,14 +464,14 @@
     const wordScore = [...state.word].reduce((sum, ch) => sum + (LETTER_VALUES[ch.toLowerCase()] || 0), 0) * 10;
     const uniqueLetters = new Set(state.word).size;
     const uniqueScore = (uniqueLetters / wordLength) * 100;
-    const base = uniqueScore + wordScore;
+    const base = Math.round(uniqueScore + wordScore);
     const remaining = MAX_WRONG - state.wrong;
     const multiplier = 1 + remaining * 0.2;
     const final = Math.round(base * multiplier);
 
     el('winWord').textContent = state.word;
     el('winWordScore').textContent = wordScore;
-    el('winUniqueScore').textContent = uniqueScore;
+    el('winUniqueScore').textContent = Math.round(uniqueScore);
     el('winBase').textContent = base;
     el('winRemaining').textContent = remaining;
     el('winMultiplier').textContent = multiplier.toFixed(1) + 'x';
