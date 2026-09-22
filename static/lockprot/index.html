@@ -31,7 +31,7 @@
     --danger:#ff0022; --success:#7cff6b; --warn:#ffb020; --focus:#ff8fa3;
   }
   [data-theme="ghost"] {
-    --bg:#eef0f2; --surface:#ffffff; --surface-2:#e4e7eb; --border:#c7ccd1;
+    --bg:#d3d3d3; --surface:#ffffff; --surface-2:#e4e7eb; --border:#c7ccd1;
     --text:#1b1f23; --muted:#6b7280; --accent:#111827; --accent-text:#ffffff;
     --danger:#c81e35; --success:#157a45; --warn:#9a6b12; --focus:#2563eb;
   }
@@ -39,6 +39,66 @@
     --bg: #2e3440; --surface: #2e3440; --surface-2: #3b4252; --border: #434c5e;
     --text: #eceff4; --muted: #81a1c1; --accent: #88c0d0; --accent-text: #2e3440;
     --danger: #bf616a; --success: #a3be8c; --warn: #ebcb8b; --focus: #88c0d0;
+  }
+  :root[data-theme="one-dark"] {
+    --bg: #282c34; --surface: #282c34; --surface-2: #21252b; --border: #3e4451;
+    --text: #abb2bf; --muted: #7f848e; --accent: #98c379; --accent-text: #282c34;
+    --danger: #e06c75; --success: #98c379; --warn: #e5c07b; --focus: #98c379;
+  }
+  :root[data-theme="ocean-deep"] {
+    --bg: #0b1c26; --surface: #102734; --surface-2: #163241; --border: #24475a;
+    --text: #dff1f7; --muted: #86aec0; --accent: #26c6da; --accent-text:#04262c;
+    --danger: #ff6b6b; --success: #4fd6a8; --warn: #ffcc66; --focus: #26c6da;
+  }
+  :root[data-theme="ocean"] {
+    --bg: #073642; --surface: #073642; --surface-2: #0b4652; --border: #176b75;
+    --text: #d9f3f0; --muted: #83b8bd; --accent: #5eead4; --accent-text: #073642;
+    --danger: #ff8b8b; --success: #a8e6cf; --warn: #ffcc66; --focus: #5eead4;
+  }
+  :root[data-theme="forest"] {
+    --bg: #17261b; --surface: #17261b; --surface-2: #223a28; --border: #36533b;
+    --text: #e6f1d8; --muted: #98ae91; --accent: #d6f36b; --accent-text: #17261b;
+    --danger: #f29b9b; --success: #b9e769; --warn: #e8c468; --focus: #d6f36b;
+  }
+  :root[data-theme="sunset"] {
+    --bg: #3a1832; --surface: #3a1832; --surface-2: #51213b; --border: #71324e;
+    --text: #fff0dc; --muted: #d6a6a1; --accent: #ffad69; --accent-text: #3a1832;
+    --danger: #ff8c82; --success: #ffd166; --warn: #ffb454; --focus: #ffad69;
+  }
+  :root[data-theme="candy"] {
+    --bg: #ffe5f1; --surface: #ffe5f1; --surface-2: #ffd1e5; --border: #e9a8ca;
+    --text: #43264f; --muted: #956a8e; --accent: #c43d82; --accent-text: #ffffff;
+    --danger: #d94770; --success: #168f78; --warn: #e8a33d; --focus: #c43d82;
+  }
+  :root[data-theme="citrus"] {
+    --bg: #f1f5c9; --surface: #f1f5c9; --surface-2: #e4ed9f; --border: #c7d66b;
+    --text: #26351c; --muted: #718047; --accent: #e07a20; --accent-text: #000000;
+    --danger: #bd4e37; --success: #397c3f; --warn: #d99a2b; --focus: #e07a20;
+  }
+  :root[data-theme="high-contrast"] {
+    --bg: #000000; --surface: #000000; --surface-2: #000000; --border: #ffffff;
+    --text: #ffffff; --muted: #cccccc; --accent: #ffff00; --accent-text: #000000;
+    --danger: #ff3333; --success: #00ff66; --warn: #ffaa00; --focus: #ffff00;
+  }
+  :root[data-theme="ghost-in-the-shell"] {
+    --bg: #0a1420; --surface: #0d1b2b; --surface-2: #142943; --border: #1f3a5f;
+    --text: #b9e6f2; --muted: #5f8aa8; --accent: #29d3c8; --accent-text: #061014;
+    --danger: #ff5470; --success: #4ce0b3; --warn: #ff9f45; --focus: #29d3c8;
+  }
+  :root[data-theme="cyberpunk"] {
+    --bg: #0d0c1d; --surface: #14122b; --surface-2: #1e1b3a; --border: #322d54;
+    --text: #f2f0ff; --muted: #8b85b8; --accent: #fcee0a; --accent-text: #0d0c1d;
+    --danger: #ff003c; --success: #39ff88; --warn: #ff8c42; --focus: #fcee0a;
+  }
+  :root[data-theme="arizona-green-tea"] {
+    --bg: #d7ecd9; --surface: #e8f5e9; --surface-2: #c3e0c6; --border: #9dcaa1;
+    --text: #26401f; --muted: #5c7a56; --accent: #e0559a; --accent-text: #000000;
+    --danger: #d1495b; --success: #3f7d4a; --warn: #e8a33d; --focus: #e0559a;
+  }
+  :root[data-theme="blueprint"] {
+    --bg: #0b3d67; --surface: #0e4a7a; --surface-2: #125a91; --border: #2b7ab8;
+    --text: #eaf4ff; --muted: #9cc4e4; --accent: #ffffff; --accent-text: #0b3d67;
+    --danger: #ff6b6b; --success: #6bffb8; --warn: #ffd166; --focus: #ffffff;
   }
 
   * { box-sizing: border-box; }
@@ -124,7 +184,19 @@
         <option value="terminal">Terminal</option>
         <option value="blood">Dracula</option>
         <option value="ghost">Ghost</option>
+        <option value="ghost-in-the-shell">Laughing Man</option>
+        <option value="cyberpunk">Cyberpunk</option>
+        <option value="arizona-green-tea">Arizona</option>
         <option value="nord">Nord</option>
+        <option value="one-dark">One Dark</option>
+        <option value="ocean-deep">Ocean Deep</option>
+        <option value="ocean">Ocean</option>
+        <option value="forest">Forest</option>
+        <option value="sunset">Sunset</option>
+        <option value="candy">Candy</option>
+        <option value="citrus">Citrus</option>
+        <option value="blueprint">Blueprint</option>
+        <option value="high-contrast">High Contrast</option>
       </select>
     </div>
   </header>
