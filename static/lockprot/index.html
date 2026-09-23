@@ -18,7 +18,7 @@
   [data-theme="synthwave"] {
     --bg:#170822; --surface:#200f33; --surface-2:#2c1447; --border:#5a2c82;
     --text:#f5e8ff; --muted:#b98fd8; --accent:#ff2fd6; --accent-text:#1a0620;
-    --danger:#ff4d6d; --success:#39ffb0; --warn:#ffe135; --focus:#2fe8ff;
+    --danger:#ff4d6d; --success:#2fe8ff; --warn:#ffe135; --focus:#2fe8ff;
   }
   [data-theme="terminal"] {
     --bg:#0a0700; --surface:#161000; --surface-2:#221800; --border:#4d3800;
@@ -274,7 +274,7 @@
         <section id="screen-win" class="hidden">
           <div class="text-center space-y-4">
             <i class="fa-solid fa-shield-halved text-4xl" style="color:var(--success)"></i>
-            <h2 class="text-xl sm:text-2xl font-extrabold tracking-wide" style="color:var(--accent)">ACCESS GRANTED</h2>
+            <h2 class="text-xl sm:text-2xl font-extrabold tracking-wide" style="color:var(--success)">ACCESS GRANTED</h2>
             <p class="text-sm text-[var(--muted)]">Decrypted sequence: <span id="winWord" class="font-bold text-[var(--text)]"></span></p>
             <div class="text-left max-w-xs mx-auto text-sm space-y-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded p-4">
               <div class="flex justify-between"><span class="text-[var(--muted)]">Letter rarity</span><span id="winWordScore"></span></div>
