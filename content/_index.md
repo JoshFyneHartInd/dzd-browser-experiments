@@ -24,6 +24,11 @@ url = '/pixelzip/'
 description = 'Optimize images for the web and beyond'
 
 [[links]]
+title = 'Windcraft'
+url = '/windcraft/'
+description = 'A Tailwind theme creator'
+
+[[links]]
 title = 'Lexi-Check'
 url = '/lexi-check/'
 description = 'Validate English words in real-time'
