@@ -1,4 +1,4 @@
-/* Favicon generator. Vanilla JS, no build step, everything runs in the browser. */
+/* FavLab: a favicon generator. Vanilla JS, no build step, everything runs in the browser. */
 (() => {
   'use strict';
 
