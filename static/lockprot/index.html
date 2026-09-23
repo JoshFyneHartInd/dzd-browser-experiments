@@ -23,7 +23,7 @@
   [data-theme="terminal"] {
     --bg:#0a0700; --surface:#161000; --surface-2:#221800; --border:#4d3800;
     --text:#ffce6b; --muted:#a67f34; --accent:#ffb000; --accent-text:#160f00;
-    --danger:#ff4d3d; --success:#ffb000; --warn:#fff45a; --focus:#ffd27a;
+    --danger:#ff4d3d; --success:#8bff5a; --warn:#fff45a; --focus:#ffd27a;
   }
   [data-theme="blood"] {
     --bg:#0a0000; --surface:#160303; --surface-2:#220505; --border:#5c0f0f;
@@ -399,9 +399,9 @@
     const btn = kbEl.querySelector('[data-letter="' + ch + '"]');
     if (!btn) return;
     btn.disabled = true;
-    btn.style.background = correct ? 'var(--success)' : 'var(--danger)';
+    btn.style.background = correct ? 'var(--accent)' : 'var(--focus)';
     btn.style.color = 'var(--bg)';
-    btn.style.borderColor = correct ? 'var(--success)' : 'var(--danger)';
+    btn.style.borderColor = correct ? 'var(--accent)' : 'var(--focus)';
     btn.style.opacity = correct ? '1' : '.55';
   }
 
