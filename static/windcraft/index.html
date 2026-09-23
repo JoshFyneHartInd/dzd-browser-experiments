@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Windsmith | A Tailwind Theme Generator</title>
+<title>Windcraft | A Tailwind Theme Creator</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -165,7 +165,7 @@
           <a href="#" class="opacity-80 hover:opacity-100">Pricing</a>
           <a href="#" class="opacity-80 hover:opacity-100">Docs</a>
         </nav>
-        <button class="text-sm font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: white;">
+        <button class="text-sm font-semibold px-4 py-2 rounded-lg transition hover:brightness-110 active:brightness-95" style="background: var(--color-primary); color: white;">
           Get started
         </button>
       </div>
@@ -180,10 +180,10 @@
         Prisma helps small teams design, launch, and iterate on interfaces without waiting on a design system that doesn't exist yet.
       </p>
       <div class="mt-8 flex items-center justify-center gap-3">
-        <button class="font-semibold px-5 py-2.5 rounded-lg" style="background: var(--color-primary); color: white;">
+        <button class="font-semibold px-5 py-2.5 rounded-lg transition hover:brightness-110 active:brightness-95" style="background: var(--color-primary); color: white;">
           Start free trial
         </button>
-        <button class="font-semibold px-5 py-2.5 rounded-lg border" style="background: var(--color-secondary); color: white; border-color: var(--color-secondary);">
+        <button class="font-semibold px-5 py-2.5 rounded-lg border transition hover:brightness-110 active:brightness-95" style="background: var(--color-secondary); color: white; border-color: var(--color-secondary);">
           Book a demo
         </button>
       </div>
@@ -193,9 +193,9 @@
     <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
       <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Buttons</h2>
       <div class="flex flex-wrap items-center gap-3">
-        <button class="font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: #fff;">Primary</button>
-        <button class="font-semibold px-4 py-2 rounded-lg" style="background: var(--color-secondary); color: #fff;">Secondary</button>
-        <button class="font-semibold px-4 py-2 rounded-lg" style="background: var(--color-accent); color: #fff;">Accent</button>
+        <button class="font-semibold px-4 py-2 rounded-lg transition hover:brightness-110 active:brightness-95" style="background: var(--color-primary); color: #fff;">Primary</button>
+        <button class="font-semibold px-4 py-2 rounded-lg transition hover:brightness-110 active:brightness-95" style="background: var(--color-secondary); color: #fff;">Secondary</button>
+        <button class="font-semibold px-4 py-2 rounded-lg transition hover:brightness-110 active:brightness-95" style="background: var(--color-accent); color: #fff;">Accent</button>
         <button disabled class="font-semibold px-4 py-2 rounded-lg cursor-not-allowed opacity-40" style="background: var(--color-secondary); color: #fff;">Disabled</button>
       </div>
     </section>
@@ -246,7 +246,7 @@
           <label for="tos" class="text-sm" style="color: var(--color-text);">I agree to the terms of service</label>
         </div>
         <div class="sm:col-span-2">
-          <button type="button" class="font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: #fff;">
+          <button type="button" class="font-semibold px-4 py-2 rounded-lg transition hover:brightness-110 active:brightness-95" style="background: var(--color-primary); color: #fff;">
             Submit
           </button>
         </div>
@@ -307,13 +307,13 @@
     <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
       <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Alerts</h2>
       <div class="flex flex-wrap gap-3">
-        <button id="toastSuccess" class="text-sm font-semibold px-4 py-2 rounded-lg border" style="border-color: var(--color-success); color: var(--color-success);">
+        <button id="toastSuccess" class="text-sm font-semibold px-4 py-2 rounded-lg border transition hover:brightness-90" style="border-color: var(--color-success); color: var(--color-success);">
           <i class="fa-solid fa-circle-check mr-1.5"></i>Trigger success
         </button>
-        <button id="toastWarning" class="text-sm font-semibold px-4 py-2 rounded-lg border" style="border-color: var(--color-warning); color: var(--color-warning);">
+        <button id="toastWarning" class="text-sm font-semibold px-4 py-2 rounded-lg border transition hover:brightness-90" style="border-color: var(--color-warning); color: var(--color-warning);">
           <i class="fa-solid fa-triangle-exclamation mr-1.5"></i>Trigger warning
         </button>
-        <button id="toastError" class="text-sm font-semibold px-4 py-2 rounded-lg border" style="border-color: var(--color-error); color: var(--color-error);">
+        <button id="toastError" class="text-sm font-semibold px-4 py-2 rounded-lg border transition hover:brightness-90" style="border-color: var(--color-error); color: var(--color-error);">
           <i class="fa-solid fa-circle-xmark mr-1.5"></i>Trigger error
         </button>
       </div>
@@ -322,7 +322,7 @@
     <!-- Modal trigger -->
     <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
       <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Modal</h2>
-      <button id="openModal" class="text-sm font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: #fff;">
+      <button id="openModal" class="text-sm font-semibold px-4 py-2 rounded-lg transition hover:brightness-110 active:brightness-95" style="background: var(--color-primary); color: #fff;">
         Open dialog
       </button>
     </section>
@@ -338,26 +338,26 @@
         </div>
       </div>
     </footer>
+
+    <!-- Toast container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 items-end"></div>
+
+    <!-- Modal -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/60 z-[70] hidden items-center justify-center px-4">
+      <div id="modalBox" class="modal-enter w-full max-w-md rounded-xl border p-6"
+        style="background: var(--color-surface); border-color: var(--color-border); color: var(--color-text);">
+        <div class="flex items-start justify-between mb-3">
+          <h3 class="text-lg font-semibold">Confirm action</h3>
+          <button id="closeModal" class="opacity-60 hover:opacity-100 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p class="text-sm opacity-80 mb-6">This is a sample dialog styled with your theme's surface, background, border, and text colors. Nothing will actually happen when you confirm.</p>
+        <div class="flex justify-end gap-2">
+          <button id="cancelModal" class="text-sm font-medium px-4 py-2 rounded-lg border transition hover:brightness-90" style="border-color: var(--color-border);">Cancel</button>
+          <button id="confirmModal" class="text-sm font-semibold px-4 py-2 rounded-lg transition hover:brightness-110 active:brightness-95" style="background: var(--color-primary); color: #fff;">Confirm</button>
+        </div>
+      </div>
+    </div>
   </main>
-</div>
-
-<!-- Toast container -->
-<div id="toastContainer" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 items-end"></div>
-
-<!-- Modal -->
-<div id="modalOverlay" class="fixed inset-0 bg-black/60 z-[70] hidden items-center justify-center px-4">
-  <div id="modalBox" class="modal-enter w-full max-w-md rounded-xl border p-6"
-    style="background: var(--color-surface); border-color: var(--color-border); color: var(--color-text);">
-    <div class="flex items-start justify-between mb-3">
-      <h3 class="text-lg font-semibold">Confirm action</h3>
-      <button id="closeModal" class="opacity-60 hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <p class="text-sm opacity-80 mb-6">This is a sample dialog styled with your theme's surface, background, border, and text colors. Nothing will actually happen when you confirm.</p>
-    <div class="flex justify-end gap-2">
-      <button id="cancelModal" class="text-sm font-medium px-4 py-2 rounded-lg border" style="border-color: var(--color-border);">Cancel</button>
-      <button id="confirmModal" class="text-sm font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: #fff;">Confirm</button>
-    </div>
-  </div>
 </div>
 
 <style>
