@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Windsmith | A Tailwind Theme Generator</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  :root{
+    /* Fixed app-shell tokens (dark, not editable, independent of user's theme) */
+    --app-bg: #0B0F14;
+    --app-panel: #12171F;
+    --app-panel-2: #171D27;
+    --app-border: #232B37;
+    --app-text: #E7EBF0;
+    --app-text-dim: #8A94A3;
+    --app-accent: #7C9CFF;
+  }
+
+  html, body { height: 100%; }
+  body{
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    background: var(--app-bg);
+    color: var(--app-text);
+  }
+
+  /* Scoped demo theme variables -- default values, overwritten live by JS */
+  #demoRoot{
+    --color-primary: #4F46E5;
+    --color-secondary: #6B7280;
+    --color-accent: #F59E0B;
+    --color-background: #FFFFFF;
+    --color-surface: #F9FAFB;
+    --color-text: #111827;
+    --color-border: #E5E7EB;
+    --color-success: #16A34A;
+    --color-warning: #D97706;
+    --color-error: #DC2626;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  ::-webkit-scrollbar{ width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track{ background: transparent; }
+  ::-webkit-scrollbar-thumb{ background: #2B3644; border-radius: 8px; }
+
+  input[type="color"]{
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    padding: 0;
+    background: none;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper{ padding: 0; }
+  input[type="color"]::-webkit-color-swatch{ border: 1px solid var(--app-border); border-radius: 0.5rem; }
+
+  @keyframes slideUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .toast-enter{ animation: slideUp .2s ease-out; }
+  .modal-enter{ animation: fadeIn .15s ease-out; }
+
+  .drawer-closed{ transform: translateX(-100%); }
+  @media (min-width: 768px){ .drawer-closed{ transform: translateX(0); } }
+</style>
+</head>
+
+<body class="h-screen overflow-hidden">
+
+<div class="flex h-screen w-full relative">
+
+  <!-- Mobile drawer toggle -->
+  <button id="drawerToggle"
+    class="md:hidden fixed top-3 left-3 z-50 h-10 w-10 rounded-lg flex items-center justify-center border"
+    style="background: var(--app-panel); border-color: var(--app-border); color: var(--app-text);"
+    aria-label="Toggle theme controls">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+
+  <!-- Mobile overlay -->
+  <div id="drawerOverlay" class="fixed inset-0 bg-black/60 z-30 md:hidden hidden"></div>
+
+  <!-- LEFT: Controls panel (app shell — always dark, fixed) -->
+  <aside id="controlsPanel"
+    class="drawer-closed fixed md:static z-40 top-0 left-0 h-full w-[19rem] shrink-0 overflow-y-auto transition-transform duration-300 border-r"
+    style="background: var(--app-panel); border-color: var(--app-border);">
+
+    <div class="px-5 pt-16 md:pt-6 pb-8">
+      <div class="flex items-center gap-2 mb-1">
+        <i class="fa-solid fa-palette" style="color: var(--app-accent);"></i>
+        <h1 class="text-base font-semibold tracking-tight">Theme Generator</h1>
+      </div>
+      <p class="text-xs mb-6" style="color: var(--app-text-dim);">Edit colors, watch the demo update live.</p>
+
+      <!-- Preset -->
+      <label class="block text-xs font-medium mb-1.5" style="color: var(--app-text-dim);">Preset</label>
+      <select id="presetSelect"
+        class="w-full mb-6 rounded-lg text-sm px-3 py-2 border outline-none focus:ring-2"
+        style="background: var(--app-panel-2); border-color: var(--app-border); color: var(--app-text); --tw-ring-color: var(--app-accent);">
+      </select>
+
+      <!-- Role rows -->
+      <div id="roleRows" class="space-y-3"></div>
+
+      <button id="resetBtn"
+        class="mt-6 w-full text-sm font-medium rounded-lg px-3 py-2 border flex items-center justify-center gap-2 hover:brightness-125 transition"
+        style="background: var(--app-panel-2); border-color: var(--app-border); color: var(--app-text);">
+        <i class="fa-solid fa-rotate-left text-xs"></i> Reset to default
+      </button>
+
+      <p class="mt-6 text-[11px] leading-relaxed" style="color: var(--app-text-dim);">
+        Your theme saves automatically in this browser. Reload anytime — it'll be right where you left it.
+      </p>
+    </div>
+  </aside>
+
+  <!-- RIGHT: Live demo site, styled entirely with the user's theme -->
+  <main id="demoRoot" class="flex-1 h-full overflow-y-auto">
+
+    <!-- Code box -->
+    <div class="px-4 sm:px-8 pt-6">
+      <div class="rounded-xl border overflow-hidden" style="border-color: var(--color-border); background: var(--color-surface);">
+        <div class="flex items-center justify-between px-4 py-2.5 border-b" style="border-color: var(--color-border);">
+          <span class="text-xs font-semibold tracking-wide" style="color: var(--color-text);">
+            <i class="fa-solid fa-code mr-1.5"></i>theme.css
+          </span>
+          <div class="flex items-center gap-2">
+            <button id="copyBtn"
+              class="text-xs font-medium px-2.5 py-1.5 rounded-md flex items-center gap-1.5 transition hover:opacity-90"
+              style="background: var(--color-primary); color: white;">
+              <i class="fa-regular fa-copy"></i> <span id="copyLabel">Copy</span>
+            </button>
+            <button id="collapseBtn"
+              class="text-xs font-medium px-2.5 py-1.5 rounded-md flex items-center gap-1.5 transition hover:opacity-90 border"
+              style="border-color: var(--color-border); color: var(--color-text);"
+              aria-expanded="true" aria-controls="codeBox">
+              <i id="collapseIcon" class="fa-solid fa-chevron-up text-[10px]"></i> <span id="collapseLabel">Collapse</span>
+            </button>
+          </div>
+        </div>
+        <pre id="codeBox" class="text-xs sm:text-sm p-4 overflow-x-auto" style="color: var(--color-text); margin:0;"><code></code></pre>
+      </div>
+    </div>
+
+    <!-- Navbar -->
+    <header class="mt-6 border-b" style="border-color: var(--color-border);">
+      <div class="max-w-6xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-2 font-bold text-lg" style="color: var(--color-text);">
+          <i class="fa-solid fa-cube" style="color: var(--color-primary);"></i> Prisma
+        </div>
+        <nav class="hidden sm:flex items-center gap-6 text-sm font-medium" style="color: var(--color-text);">
+          <a href="#" class="opacity-80 hover:opacity-100">Product</a>
+          <a href="#" class="opacity-80 hover:opacity-100">Pricing</a>
+          <a href="#" class="opacity-80 hover:opacity-100">Docs</a>
+        </nav>
+        <button class="text-sm font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: white;">
+          Get started
+        </button>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-8 py-16 text-center">
+      <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight max-w-2xl mx-auto" style="color: var(--color-text);">
+        Ship products people actually enjoy using
+      </h1>
+      <p class="mt-4 max-w-xl mx-auto text-base sm:text-lg opacity-80" style="color: var(--color-text);">
+        Prisma helps small teams design, launch, and iterate on interfaces without waiting on a design system that doesn't exist yet.
+      </p>
+      <div class="mt-8 flex items-center justify-center gap-3">
+        <button class="font-semibold px-5 py-2.5 rounded-lg" style="background: var(--color-primary); color: white;">
+          Start free trial
+        </button>
+        <button class="font-semibold px-5 py-2.5 rounded-lg border" style="background: var(--color-secondary); color: white; border-color: var(--color-secondary);">
+          Book a demo
+        </button>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+      <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Buttons</h2>
+      <div class="flex flex-wrap items-center gap-3">
+        <button class="font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: #fff;">Primary</button>
+        <button class="font-semibold px-4 py-2 rounded-lg" style="background: var(--color-secondary); color: #fff;">Secondary</button>
+        <button class="font-semibold px-4 py-2 rounded-lg" style="background: var(--color-accent); color: #fff;">Accent</button>
+        <button disabled class="font-semibold px-4 py-2 rounded-lg cursor-not-allowed opacity-40" style="background: var(--color-secondary); color: #fff;">Disabled</button>
+      </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+      <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Cards</h2>
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div class="rounded-xl border p-5" style="background: var(--color-surface); border-color: var(--color-border);">
+          <i class="fa-solid fa-bolt mb-3" style="color: var(--color-primary);"></i>
+          <h3 class="font-semibold mb-1" style="color: var(--color-text);">Fast setup</h3>
+          <p class="text-sm opacity-75" style="color: var(--color-text);">Wire up a working prototype in minutes, not sprints.</p>
+        </div>
+        <div class="rounded-xl border p-5" style="background: var(--color-surface); border-color: var(--color-border);">
+          <i class="fa-solid fa-shield-halved mb-3" style="color: var(--color-primary);"></i>
+          <h3 class="font-semibold mb-1" style="color: var(--color-text);">Reliable by default</h3>
+          <p class="text-sm opacity-75" style="color: var(--color-text);">Sensible defaults so nothing breaks when you ship.</p>
+        </div>
+        <div class="rounded-xl border p-5" style="background: var(--color-surface); border-color: var(--color-border);">
+          <i class="fa-solid fa-layer-group mb-3" style="color: var(--color-primary);"></i>
+          <h3 class="font-semibold mb-1" style="color: var(--color-text);">Composable</h3>
+          <p class="text-sm opacity-75" style="color: var(--color-text);">Every piece works alone or together.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Form -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+      <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Form</h2>
+      <form id="demoForm" class="rounded-xl border p-5 grid sm:grid-cols-2 gap-4 max-w-2xl" style="background: var(--color-surface); border-color: var(--color-border);">
+        <div class="sm:col-span-1">
+          <label class="block text-sm font-medium mb-1" style="color: var(--color-text);">Full name</label>
+          <input type="text" placeholder="Ada Lovelace"
+            class="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+            style="background: var(--color-background); border-color: var(--color-border); color: var(--color-text);" />
+        </div>
+        <div class="sm:col-span-1">
+          <label class="block text-sm font-medium mb-1" style="color: var(--color-text);">Team size</label>
+          <select class="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
+            style="background: var(--color-background); border-color: var(--color-border); color: var(--color-text);">
+            <option>1–5 people</option>
+            <option>6–20 people</option>
+            <option>20+ people</option>
+          </select>
+        </div>
+        <div class="sm:col-span-2 flex items-center gap-2">
+          <input type="checkbox" id="tos" class="h-4 w-4 rounded" />
+          <label for="tos" class="text-sm" style="color: var(--color-text);">I agree to the terms of service</label>
+        </div>
+        <div class="sm:col-span-2">
+          <button type="button" class="font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: #fff;">
+            Submit
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Table -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+      <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Data table</h2>
+      <div class="rounded-xl border overflow-x-auto" style="border-color: var(--color-border);">
+        <table class="w-full text-sm text-left" style="color: var(--color-text);">
+          <thead>
+            <tr style="background: var(--color-surface); border-bottom: 1px solid var(--color-border);">
+              <th class="px-4 py-2.5 font-semibold">Project</th>
+              <th class="px-4 py-2.5 font-semibold">Owner</th>
+              <th class="px-4 py-2.5 font-semibold">Status</th>
+              <th class="px-4 py-2.5 font-semibold">Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+              <td class="px-4 py-2.5">Marketing site</td>
+              <td class="px-4 py-2.5 opacity-75">Priya</td>
+              <td class="px-4 py-2.5"><span class="badge-success">Live</span></td>
+              <td class="px-4 py-2.5 opacity-75">2 days ago</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--color-border);">
+              <td class="px-4 py-2.5">Billing revamp</td>
+              <td class="px-4 py-2.5 opacity-75">Marcus</td>
+              <td class="px-4 py-2.5"><span class="badge-warning">In review</span></td>
+              <td class="px-4 py-2.5 opacity-75">5 hours ago</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2.5">Legacy import</td>
+              <td class="px-4 py-2.5 opacity-75">Dana</td>
+              <td class="px-4 py-2.5"><span class="badge-error">Blocked</span></td>
+              <td class="px-4 py-2.5 opacity-75">1 week ago</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Badges -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+      <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Badges</h2>
+      <div class="flex flex-wrap gap-2">
+        <span class="badge" style="background: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary);">Primary</span>
+        <span class="badge" style="background: color-mix(in srgb, var(--color-secondary) 15%, transparent); color: var(--color-secondary);">Secondary</span>
+        <span class="badge" style="background: color-mix(in srgb, var(--color-accent) 20%, transparent); color: var(--color-accent);">Accent</span>
+        <span class="badge-success">Success</span>
+        <span class="badge-warning">Warning</span>
+        <span class="badge-error">Error</span>
+      </div>
+    </section>
+
+    <!-- Alerts -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+      <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Alerts</h2>
+      <div class="flex flex-wrap gap-3">
+        <button id="toastSuccess" class="text-sm font-semibold px-4 py-2 rounded-lg border" style="border-color: var(--color-success); color: var(--color-success);">
+          <i class="fa-solid fa-circle-check mr-1.5"></i>Trigger success
+        </button>
+        <button id="toastWarning" class="text-sm font-semibold px-4 py-2 rounded-lg border" style="border-color: var(--color-warning); color: var(--color-warning);">
+          <i class="fa-solid fa-triangle-exclamation mr-1.5"></i>Trigger warning
+        </button>
+        <button id="toastError" class="text-sm font-semibold px-4 py-2 rounded-lg border" style="border-color: var(--color-error); color: var(--color-error);">
+          <i class="fa-solid fa-circle-xmark mr-1.5"></i>Trigger error
+        </button>
+      </div>
+    </section>
+
+    <!-- Modal trigger -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+      <h2 class="text-sm font-semibold uppercase tracking-wide mb-4 opacity-60" style="color: var(--color-text);">Modal</h2>
+      <button id="openModal" class="text-sm font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: #fff;">
+        Open dialog
+      </button>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t mt-8" style="border-color: var(--color-border); background: var(--color-surface);">
+      <div class="max-w-6xl mx-auto px-4 sm:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm opacity-75" style="color: var(--color-text);">
+        <span>© 2026 Prisma, Inc.</span>
+        <div class="flex items-center gap-4">
+          <a href="#"><i class="fa-brands fa-github"></i></a>
+          <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
+          <a href="#"><i class="fa-brands fa-linkedin"></i></a>
+        </div>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 items-end"></div>
+
+<!-- Modal -->
+<div id="modalOverlay" class="fixed inset-0 bg-black/60 z-[70] hidden items-center justify-center px-4">
+  <div id="modalBox" class="modal-enter w-full max-w-md rounded-xl border p-6"
+    style="background: var(--color-surface); border-color: var(--color-border); color: var(--color-text);">
+    <div class="flex items-start justify-between mb-3">
+      <h3 class="text-lg font-semibold">Confirm action</h3>
+      <button id="closeModal" class="opacity-60 hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <p class="text-sm opacity-80 mb-6">This is a sample dialog styled with your theme's surface, background, border, and text colors. Nothing will actually happen when you confirm.</p>
+    <div class="flex justify-end gap-2">
+      <button id="cancelModal" class="text-sm font-medium px-4 py-2 rounded-lg border" style="border-color: var(--color-border);">Cancel</button>
+      <button id="confirmModal" class="text-sm font-semibold px-4 py-2 rounded-lg" style="background: var(--color-primary); color: #fff;">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  #demoRoot .badge, #demoRoot .badge-success, #demoRoot .badge-warning, #demoRoot .badge-error{
+    display: inline-flex; align-items: center; font-size: 0.75rem; font-weight: 600;
+    padding: 0.25rem 0.6rem; border-radius: 999px;
+  }
+  #demoRoot .badge-success{ background: color-mix(in srgb, var(--color-success) 15%, transparent); color: var(--color-success); }
+  #demoRoot .badge-warning{ background: color-mix(in srgb, var(--color-warning) 15%, transparent); color: var(--color-warning); }
+  #demoRoot .badge-error{ background: color-mix(in srgb, var(--color-error) 15%, transparent); color: var(--color-error); }
+</style>
+
+<script>
+(function(){
+  const ROLES = ["primary","secondary","accent","background","surface","text","border","success","warning","error"];
+  const LABELS = {
+    primary: "Primary", secondary: "Secondary", accent: "Accent",
+    background: "Background", surface: "Surface", text: "Text",
+    border: "Border", success: "Success", warning: "Warning", error: "Error"
+  };
+
+  const PRESETS = {
+    "Default": { primary:"#4F46E5", secondary:"#6B7280", accent:"#F59E0B", background:"#FFFFFF", surface:"#F9FAFB", text:"#111827", border:"#E5E7EB", success:"#16A34A", warning:"#D97706", error:"#DC2626" },
+    "Ocean": { primary:"#0EA5E9", secondary:"#0369A1", accent:"#14B8A6", background:"#F0F9FF", surface:"#E0F2FE", text:"#0C4A6E", border:"#BAE6FD", success:"#059669", warning:"#D97706", error:"#E11D48" },
+    "Sunset": { primary:"#F97316", secondary:"#DB2777", accent:"#FACC15", background:"#FFF7ED", surface:"#FFEDD5", text:"#7C2D12", border:"#FED7AA", success:"#65A30D", warning:"#EA580C", error:"#DC2626" },
+    "Forest": { primary:"#15803D", secondary:"#365314", accent:"#CA8A04", background:"#F0FDF4", surface:"#DCFCE7", text:"#14532D", border:"#BBF7D0", success:"#16A34A", warning:"#B45309", error:"#B91C1C" },
+    "Monochrome": { primary:"#171717", secondary:"#525252", accent:"#737373", background:"#FAFAFA", surface:"#F5F5F5", text:"#171717", border:"#D4D4D4", success:"#16A34A", warning:"#CA8A04", error:"#DC2626" },
+    "Midnight": { primary:"#818CF8", secondary:"#A78BFA", accent:"#F472B6", background:"#0F172A", surface:"#1E293B", text:"#E2E8F0", border:"#334155", success:"#34D399", warning:"#FBBF24", error:"#F87171" }
+  };
+
+  const STORAGE_KEY = "tw-theme-generator:v1";
+  const demoRoot = document.getElementById("demoRoot");
+  const roleRows = document.getElementById("roleRows");
+  const presetSelect = document.getElementById("presetSelect");
+  const codeBox = document.querySelector("#codeBox code");
+
+  // Build preset dropdown
+  Object.keys(PRESETS).forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name; opt.textContent = name;
+    presetSelect.appendChild(opt);
+  });
+  const customOpt = document.createElement("option");
+  customOpt.value = "Custom"; customOpt.textContent = "Custom";
+  customOpt.disabled = true;
+  presetSelect.appendChild(customOpt);
+
+  // Build role rows
+  const inputs = {};
+  ROLES.forEach(role => {
+    const row = document.createElement("div");
+    row.className = "flex items-center gap-2";
+    row.innerHTML = `
+      <label class="w-20 shrink-0 text-xs font-medium" style="color: var(--app-text-dim);">${LABELS[role]}</label>
+      <input type="color" id="picker-${role}" class="shrink-0" />
+      <input type="text" id="hex-${role}" maxlength="7"
+        class="flex-1 min-w-0 rounded-lg text-xs px-2.5 py-2 border outline-none focus:ring-2 font-mono uppercase"
+        style="background: var(--app-panel-2); border-color: var(--app-border); color: var(--app-text); --tw-ring-color: var(--app-accent);" />
+    `;
+    roleRows.appendChild(row);
+    inputs[role] = {
+      picker: row.querySelector(`#picker-${role}`),
+      hex: row.querySelector(`#hex-${role}`)
+    };
+  });
+
+  let state = {};
+
+  function isValidHex(v){ return /^#([0-9a-fA-F]{6})$/.test(v); }
+
+  function applyTheme(colors, opts){
+    opts = opts || {};
+    ROLES.forEach(role => {
+      const val = colors[role];
+      demoRoot.style.setProperty(`--color-${role}`, val);
+      inputs[role].picker.value = val;
+      inputs[role].hex.value = val.toUpperCase();
+    });
+    updateCodeBox(colors);
+    if (!opts.skipSave) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ colors, preset: opts.presetName || "Custom" }));
+    }
+    presetSelect.value = opts.presetName || "Custom";
+  }
+
+  function updateCodeBox(colors){
+    const lines = [":root {"];
+    ROLES.forEach(role => lines.push(`  --color-${role}: ${colors[role].toUpperCase()};`));
+    lines.push("}");
+    codeBox.textContent = lines.join("\n");
+  }
+
+  function updateRole(role, value){
+    state[role] = value;
+    demoRoot.style.setProperty(`--color-${role}`, value);
+    inputs[role].picker.value = value;
+    inputs[role].hex.value = value.toUpperCase();
+    updateCodeBox(state);
+    presetSelect.value = "Custom";
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ colors: state, preset: "Custom" }));
+  }
+
+  ROLES.forEach(role => {
+    inputs[role].picker.addEventListener("input", e => updateRole(role, e.target.value));
+    inputs[role].hex.addEventListener("change", e => {
+      let v = e.target.value.trim();
+      if (v && v[0] !== "#") v = "#" + v;
+      if (isValidHex(v)) {
+        updateRole(role, v);
+      } else {
+        e.target.value = state[role].toUpperCase(); // revert
+      }
+    });
+  });
+
+  presetSelect.addEventListener("change", () => {
+    const name = presetSelect.value;
+    if (PRESETS[name]) {
+      state = { ...PRESETS[name] };
+      applyTheme(state, { presetName: name });
+    }
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    state = { ...PRESETS["Default"] };
+    applyTheme(state, { presetName: "Default" });
+  });
+
+  // Load saved state or fall back to Default preset
+  (function init(){
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) {}
+    if (saved && saved.colors && ROLES.every(r => saved.colors[r])) {
+      state = saved.colors;
+      applyTheme(state, { presetName: saved.preset || "Custom", skipSave: true });
+    } else {
+      state = { ...PRESETS["Default"] };
+      applyTheme(state, { presetName: "Default" });
+    }
+  })();
+
+  // Collapse/expand code box
+  const CODE_COLLAPSE_KEY = "tw-theme-generator:codeCollapsed";
+  const codeBoxEl = document.getElementById("codeBox");
+  const collapseBtn = document.getElementById("collapseBtn");
+  const collapseIcon = document.getElementById("collapseIcon");
+  const collapseLabel = document.getElementById("collapseLabel");
+
+  function setCodeCollapsed(collapsed){
+    codeBoxEl.style.display = collapsed ? "none" : "block";
+    collapseIcon.className = collapsed ? "fa-solid fa-chevron-down text-[10px]" : "fa-solid fa-chevron-up text-[10px]";
+    collapseLabel.textContent = collapsed ? "Expand" : "Collapse";
+    collapseBtn.setAttribute("aria-expanded", String(!collapsed));
+    localStorage.setItem(CODE_COLLAPSE_KEY, collapsed ? "1" : "0");
+  }
+
+  collapseBtn.addEventListener("click", () => {
+    const collapsed = codeBoxEl.style.display !== "none";
+    setCodeCollapsed(collapsed);
+  });
+
+  setCodeCollapsed(localStorage.getItem(CODE_COLLAPSE_KEY) === "1");
+
+  // Copy to clipboard
+  document.getElementById("copyBtn").addEventListener("click", () => {
+    navigator.clipboard.writeText(codeBox.textContent).then(() => {
+      const label = document.getElementById("copyLabel");
+      label.textContent = "Copied!";
+      setTimeout(() => label.textContent = "Copy", 1500);
+    });
+  });
+
+  // Mobile drawer
+  const panel = document.getElementById("controlsPanel");
+  const overlay = document.getElementById("drawerOverlay");
+  const toggle = document.getElementById("drawerToggle");
+
+  function openDrawer(){ panel.classList.remove("drawer-closed"); overlay.classList.remove("hidden"); }
+  function closeDrawer(){ panel.classList.add("drawer-closed"); overlay.classList.add("hidden"); }
+
+  toggle.addEventListener("click", () => {
+    panel.classList.contains("drawer-closed") ? openDrawer() : closeDrawer();
+  });
+  overlay.addEventListener("click", closeDrawer);
+
+  // Open by default on mobile
+  if (window.innerWidth < 768) openDrawer(); else closeDrawer();
+
+  // Toasts
+  const toastContainer = document.getElementById("toastContainer");
+  function showToast(kind, message, icon){
+    const colorVar = `var(--color-${kind})`;
+    const toast = document.createElement("div");
+    toast.className = "toast-enter flex items-center gap-2.5 rounded-lg border px-4 py-3 shadow-lg text-sm font-medium max-w-xs";
+    toast.style.background = "var(--color-surface)";
+    toast.style.borderColor = colorVar;
+    toast.style.color = "var(--color-text)";
+    toast.innerHTML = `<i class="fa-solid ${icon}" style="color:${colorVar}"></i><span>${message}</span>`;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+      toast.style.transition = "opacity .2s ease";
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 200);
+    }, 3000);
+  }
+  document.getElementById("toastSuccess").addEventListener("click", () => showToast("success", "Changes saved successfully.", "fa-circle-check"));
+  document.getElementById("toastWarning").addEventListener("click", () => showToast("warning", "Your plan is nearing its limit.", "fa-triangle-exclamation"));
+  document.getElementById("toastError").addEventListener("click", () => showToast("error", "Something went wrong. Try again.", "fa-circle-xmark"));
+
+  // Modal
+  const modalOverlay = document.getElementById("modalOverlay");
+  function openModal(){ modalOverlay.classList.remove("hidden"); modalOverlay.classList.add("flex"); }
+  function closeModalFn(){ modalOverlay.classList.add("hidden"); modalOverlay.classList.remove("flex"); }
+  document.getElementById("openModal").addEventListener("click", openModal);
+  document.getElementById("closeModal").addEventListener("click", closeModalFn);
+  document.getElementById("cancelModal").addEventListener("click", closeModalFn);
+  document.getElementById("confirmModal").addEventListener("click", closeModalFn);
+  modalOverlay.addEventListener("click", e => { if (e.target === modalOverlay) closeModalFn(); });
+})();
+</script>
+
+</body>
+</html>
