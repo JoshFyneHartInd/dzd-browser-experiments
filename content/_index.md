@@ -29,6 +29,11 @@ url = '/windcraft/'
 description = 'A Tailwind theme creator'
 
 [[links]]
+title = 'FavLab'
+url = '/favlab/'
+description = 'A favicon generator'
+
+[[links]]
 title = 'Lexi-Check'
 url = '/lexi-check/'
 description = 'Validate English words in real-time'
