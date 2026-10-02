@@ -1,0 +1,314 @@
+// Rendering, events, focus and announcements. Holds no application state:
+// main.js owns the data and passes it to render().
+import { layoutRows, subnetInfo, canDivide, nodeCidr, totalHosts } from './subnet.js';
+import { COLUMNS } from './state.js';
+
+const nf = new Intl.NumberFormat();
+const DATA_COLUMNS = ['subnet', 'netmask', 'range', 'usable', 'hosts'];
+const LABELS = Object.fromEntries(COLUMNS.map((c) => [c.id, c.label]));
+const icon = (name) => `<span class="icon" aria-hidden="true">${name}</span>`;
+
+function value(id, info) {
+  switch (id) {
+    case 'netmask': return info.netmask;
+    case 'range': return info.rangeText;
+    case 'usable': return info.usableText;
+    case 'hosts': return nf.format(info.hosts);
+    default: return info.cidr;
+  }
+}
+
+export function createUI(h) {
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    form: $('network-form'), address: $('address'), mask: $('mask'),
+    addressError: $('address-error'), maskError: $('mask-error'),
+    notice: $('notice'), feedback: $('feedback'), live: $('live'),
+    results: $('results'), summary: $('summary'), columns: $('columns'),
+    reset: $('reset'), copyLink: $('copy-link'), exportCsv: $('export-csv'), tooltip: $('tooltip'),
+  };
+  const wide = matchMedia('(min-width: 40rem)'); // Tailwind's `sm`
+
+  let model = null;
+  let nodes = new Map();
+
+  // ---- messages ----------------------------------------------------------
+  function setMessage(el, kind, text) {
+    if (!text) {
+      el.hidden = true;
+      el.replaceChildren();
+      return;
+    }
+    const symbol = { error: 'error', info: 'info', success: 'check_circle' }[kind];
+    const i = document.createElement('span');
+    i.className = 'icon';
+    i.setAttribute('aria-hidden', 'true');
+    i.textContent = symbol;
+    const t = document.createElement('span');
+    t.textContent = text;
+    el.dataset.kind = kind;
+    el.replaceChildren(i, t);
+    el.hidden = false;
+  }
+
+  let liveTimer = 0;
+  function announce(text) {
+    els.live.textContent = '';
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => { els.live.textContent = text; }, 60);
+  }
+
+  // Visible message that is also spoken.
+  function setFeedback(kind, text) {
+    setMessage(els.feedback, kind, text);
+    if (text) announce(text);
+  }
+
+  function setNotice(text) {
+    setMessage(els.notice, 'info', text);
+    if (text) announce(text);
+  }
+
+  function showErrors(errors) {
+    setMessage(els.addressError, 'error', errors.address || '');
+    setMessage(els.maskError, 'error', errors.mask || '');
+    els.address.toggleAttribute('aria-invalid', Boolean(errors.address));
+    els.mask.toggleAttribute('aria-invalid', Boolean(errors.mask));
+    if (errors.address) els.address.setAttribute('aria-invalid', 'true');
+    if (errors.mask) els.mask.setAttribute('aria-invalid', 'true');
+    (errors.address ? els.address : errors.mask ? els.mask : null)?.focus();
+  }
+
+  function clearErrors() {
+    showErrors({});
+  }
+
+  function setInputs({ address, mask }) {
+    els.address.value = address;
+    els.mask.value = mask;
+  }
+
+  // ---- columns -----------------------------------------------------------
+  function buildColumnChecks() {
+    els.columns.innerHTML = COLUMNS.map((c) => `
+      <label class="inline-flex min-h-11 items-center gap-2 text-sm">
+        <input type="checkbox" data-col="${c.id}" class="size-5 accent-accent">${c.label}
+      </label>`).join('');
+  }
+
+  function getColumns() {
+    const cols = {};
+    els.columns.querySelectorAll('input[data-col]').forEach((cb) => { cols[cb.dataset.col] = cb.checked; });
+    return cols;
+  }
+
+  function setColumns(cols) {
+    els.columns.querySelectorAll('input[data-col]').forEach((cb) => { cb.checked = Boolean(cols[cb.dataset.col]); });
+  }
+
+  // ---- rendering ---------------------------------------------------------
+  function copyButton(cidr) {
+    return `<button type="button" class="btn btn-icon" data-action="copy" data-cidr="${cidr}"
+      aria-label="Copy ${cidr}" data-tip="Copy ${cidr}">${icon('content_copy')}</button>`;
+  }
+
+  function divideButton(cidr, node) {
+    const disabled = canDivide(node) ? 'false' : 'true';
+    return `<button type="button" class="btn" data-action="divide" data-cidr="${cidr}" aria-disabled="${disabled}"
+      aria-label="Divide ${cidr}">${icon('call_split')}Divide</button>`;
+  }
+
+  function noteHtml(info, cols) {
+    if (!info.note) return '';
+    // Show the note once, next to whichever of these columns is visible.
+    return `<p class="mt-0.5 text-xs text-fg-muted">${info.note}</p>`;
+  }
+
+  function noteColumn(cols) {
+    return cols.usable ? 'usable' : cols.hosts ? 'hosts' : null;
+  }
+
+  function tableHtml(rows, maxDepth, cols) {
+    const dataCols = DATA_COLUMNS.filter((id) => cols[id]);
+    const showJoin = cols.join && maxDepth > 0;
+    const noteIn = noteColumn(cols);
+    const root = rows.length ? `Subnets of ${nodeCidr(model.root)}` : 'Subnets';
+    let h = '<div class="overflow-x-auto rounded-lg border border-border bg-surface"><table class="w-full border-separate border-spacing-0 text-left text-sm">';
+    h += `<caption class="sr-only">${root}</caption><thead><tr class="bg-surface-2">`;
+    for (const id of dataCols) h += `<th scope="col" class="px-3 py-2 font-semibold whitespace-nowrap">${LABELS[id]}</th>`;
+    if (cols.divide) h += `<th scope="col" class="px-3 py-2 font-semibold">${LABELS.divide}</th>`;
+    if (showJoin) h += `<th scope="col" colspan="${maxDepth}" class="px-3 py-2 font-semibold">${LABELS.join}</th>`;
+    h += '</tr></thead><tbody>';
+    rows.forEach((row, index) => {
+      const info = subnetInfo(row.node.addr, row.node.bits);
+      const cidr = info.cidr;
+      h += `<tr data-row="${cidr}" tabindex="-1" class="${index % 2 ? 'bg-surface-2' : 'bg-surface'}">`;
+      for (const id of dataCols) {
+        const note = noteIn === id ? noteHtml(info, cols) : '';
+        if (id === 'subnet') {
+          h += `<th scope="row" class="border-t border-border px-3 py-1 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-1"><span class="font-mono">${cidr}</span>${copyButton(cidr)}</span></th>`;
+        } else {
+          h += `<td class="border-t border-border px-3 py-1 ${id === 'hosts' ? 'text-right ' : ''}font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}</td>`;
+        }
+      }
+      if (cols.divide) h += `<td class="border-t border-border px-3 py-1">${divideButton(cidr, row.node)}</td>`;
+      if (showJoin) {
+        if (row.depth < maxDepth) h += `<td colspan="${maxDepth - row.depth}" class="border-t border-border"></td>`;
+        for (const j of row.joins) {
+          const jc = nodeCidr(j.node);
+          h += `<td rowspan="${j.span}" class="join-cell border-t border-border"><button type="button" class="bracket" data-action="join" data-cidr="${jc}" data-parity="${j.depth % 2}" aria-label="Join into ${jc}">${icon('merge')}<span>/${j.node.bits}</span></button></td>`;
+        }
+      }
+      h += '</tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+
+  function cardsHtml(rows, cols) {
+    const noteIn = noteColumn(cols);
+    let h = '<ol class="m-0 list-none space-y-3 p-0">';
+    for (const row of rows) {
+      const info = subnetInfo(row.node.addr, row.node.bits);
+      const cidr = info.cidr;
+      const indent = Math.min(row.depth, 5) * 0.75;
+      const fields = DATA_COLUMNS.filter((id) => id !== 'subnet' && cols[id]);
+      h += `<li data-row="${cidr}" tabindex="-1" class="card rounded-lg border border-border bg-surface p-3" style="margin-left:${indent}rem">`;
+      h += '<div class="flex items-center justify-between gap-2">';
+      h += `<h3 class="card-title font-mono text-base font-semibold${cols.subnet ? '' : ' sr-only'}">${cidr}</h3>`;
+      if (cols.subnet) h += copyButton(cidr);
+      h += '</div>';
+      if (fields.length) {
+        h += '<dl class="mt-2 space-y-2">';
+        for (const id of fields) {
+          h += `<div><dt class="text-xs text-fg-muted">${LABELS[id]}</dt><dd class="font-mono text-sm tabular-nums" style="overflow-wrap:anywhere">${value(id, info)}</dd></div>`;
+        }
+        h += '</dl>';
+      }
+      if (info.note && noteIn) h += noteHtml(info, cols);
+      const showJoin = cols.join && row.joins.length > 0;
+      if (cols.divide || showJoin) {
+        h += '<div class="mt-3 flex flex-wrap gap-2">';
+        if (cols.divide) h += divideButton(cidr, row.node);
+        if (showJoin) {
+          for (const j of row.joins) {
+            const jc = nodeCidr(j.node);
+            h += `<button type="button" class="bracket bracket-inline" data-action="join" data-cidr="${jc}" data-parity="${j.depth % 2}" aria-label="Join into ${jc}">${icon('merge')}<span>Join /${j.node.bits}</span></button>`;
+          }
+        }
+        h += '</div>';
+      }
+      h += '</li>';
+    }
+    return h + '</ol>';
+  }
+
+  function render(next) {
+    model = next;
+    const { rows, maxDepth } = layoutRows(model.root);
+    nodes = new Map();
+    for (const row of rows) {
+      nodes.set(nodeCidr(row.node), row.node);
+      for (const j of row.joins) nodes.set(nodeCidr(j.node), j.node);
+    }
+    const count = rows.length;
+    els.summary.textContent = `${nf.format(count)} ${count === 1 ? 'subnet' : 'subnets'}, ${nf.format(totalHosts(model.root))} usable ${totalHosts(model.root) === 1 ? 'host' : 'hosts'} in total`;
+    els.results.innerHTML = wide.matches ? tableHtml(rows, maxDepth, model.cols) : cardsHtml(rows, model.cols);
+  }
+
+  /** Put keyboard focus on a sensible control in the row with this CIDR. */
+  function focusRow(cidr) {
+    const row = els.results.querySelector(`[data-row="${cidr}"]`);
+    if (!row) return;
+    const target = row.querySelector('[data-action="divide"]')
+      || row.querySelector('[data-action="copy"]')
+      || row.querySelector('[data-action="join"]')
+      || row;
+    target.focus();
+  }
+
+  // ---- tooltip -----------------------------------------------------------
+  let tipTarget = null;
+  let tipTimer = 0;
+  function showTip(btn) {
+    clearTimeout(tipTimer);
+    tipTarget = btn;
+    const tip = els.tooltip;
+    tip.textContent = btn.dataset.tip;
+    tip.hidden = false;
+    const r = btn.getBoundingClientRect();
+    const t = tip.getBoundingClientRect();
+    let left = r.left + r.width / 2 - t.width / 2;
+    left = Math.max(4, Math.min(left, document.documentElement.clientWidth - t.width - 4));
+    let top = r.top - t.height + 2;
+    if (top < 4) top = r.bottom - 2;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+  }
+  function hideTip(delay = 0) {
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => {
+      els.tooltip.hidden = true;
+      tipTarget = null;
+    }, delay);
+  }
+
+  els.results.addEventListener('mouseover', (e) => {
+    const b = e.target.closest('[data-tip]');
+    if (b) showTip(b);
+  });
+  els.results.addEventListener('mouseout', (e) => {
+    if (e.target.closest('[data-tip]')) hideTip(150);
+  });
+  els.results.addEventListener('focusin', (e) => {
+    const b = e.target.closest('[data-tip]');
+    if (b) showTip(b);
+  });
+  els.results.addEventListener('focusout', (e) => {
+    if (e.target.closest('[data-tip]')) hideTip(0);
+  });
+  els.tooltip.addEventListener('mouseenter', () => clearTimeout(tipTimer));
+  els.tooltip.addEventListener('mouseleave', () => hideTip(0));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !els.tooltip.hidden) hideTip(0);
+  });
+  window.addEventListener('scroll', () => { if (!els.tooltip.hidden) hideTip(0); }, { passive: true });
+
+  // ---- events ------------------------------------------------------------
+  els.results.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn || btn.getAttribute('aria-disabled') === 'true') return;
+    const cidr = btn.dataset.cidr;
+    if (btn.dataset.action === 'copy') h.onCopyCidr(cidr);
+    else if (btn.dataset.action === 'divide') h.onDivide(nodes.get(cidr));
+    else if (btn.dataset.action === 'join') h.onJoin(nodes.get(cidr));
+  });
+
+  els.form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    h.onUpdate({ address: els.address.value, mask: els.mask.value });
+  });
+
+  // A pasted CIDR is split into the two fields straight away.
+  els.address.addEventListener('paste', () => {
+    setTimeout(() => {
+      const v = els.address.value;
+      const slash = v.indexOf('/');
+      if (slash === -1) return;
+      els.mask.value = v.slice(slash + 1).trim();
+      els.address.value = v.slice(0, slash).trim();
+    }, 0);
+  });
+
+  els.reset.addEventListener('click', () => h.onReset());
+  els.copyLink.addEventListener('click', () => h.onCopyLink());
+  els.exportCsv.addEventListener('click', () => h.onExport());
+  els.columns.addEventListener('change', (e) => {
+    const cb = e.target.closest('input[data-col]');
+    if (cb) h.onColumns(getColumns(), cb.dataset.col, cb.checked);
+  });
+  wide.addEventListener('change', () => { if (model) render(model); });
+
+  buildColumnChecks();
+
+  return { render, focusRow, announce, setFeedback, setNotice, showErrors, clearErrors, setInputs, setColumns, getColumns };
+}

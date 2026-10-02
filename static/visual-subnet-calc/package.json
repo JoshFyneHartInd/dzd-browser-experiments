@@ -1,0 +1,12 @@
+{
+  "name": "visual-subnet-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Visual IPv4 subnet calculator. Static site, no build step.",
+  "scripts": {
+    "test": "node --test",
+    "contrast": "node tools/contrast.js"
+  },
+  "license": "MIT"
+}

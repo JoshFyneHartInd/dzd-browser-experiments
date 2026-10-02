@@ -1,0 +1,17 @@
+/* Midnight values as a fallback, so the page looks right even if JavaScript fails.
+   js/themes.js (applied on <html>) overrides these. */
+:root {
+  --bg: #14161a;
+  --surface: #1d2026;
+  --surface-2: #272b33;
+  --border: #363b45;
+  --fg: #e8e9ec;
+  --fg-muted: #9aa0ab;
+  --accent: #6c9bff;
+  --accent-fg: #0b1020;
+  --danger: #ff7a85;
+  color-scheme: dark;
+
+  /* Derived tokens: themes don't need to define these. */
+  --focus: var(--accent);
+}
