@@ -154,12 +154,13 @@ export function createUI(h) {
       dataCols.forEach((id, n) => {
         const note = noteIn === id ? noteHtml(info, cols) : '';
         const isFirst = n === 0;
-        const first = isFirst ? 'size-cell pb-1 ' : '';
+        // Extra bottom padding keeps the Copy button clear of the size bar (3.6px tall) along the cell's bottom edge.
+        const first = isFirst ? 'size-cell pt-[3px] pb-2 ' : '';
         const bar = isFirst ? `<span class="size-bar" aria-hidden="true" style="--share:${share}"></span>` : '';
         if (id === 'subnet') {
           h += `<th scope="row" class="${first}border-t border-border px-2 py-0.5 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-2">${copyButton(cidr)}<span class="font-mono">${cidr}</span></span>${bar}</th>`;
         } else {
-          h += `<td class="${first}border-t border-border px-2 py-0.5 ${id === 'hosts' ? 'text-right ' : ''}font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}${bar}</td>`;
+          h += `<td class="${first}border-t border-border px-2 py-0.5 font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}${bar}</td>`;
         }
       });
       if (cols.divide) h += `<td class="border-t border-border px-2 py-0.5">${divideButton(cidr, row.node)}</td>`;
