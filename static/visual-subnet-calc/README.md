@@ -71,9 +71,10 @@ Host bits in `n` are cleared when a link is read. Links from the original tool's
 - **Update** applies the fields and starts from one row. **Reset** goes back to a single row for the network last applied with Update, and restores the fields to it.
 - A CIDR pasted into the address field (for example `10.0.0.0/16`) is split into the two fields. If the address has host bits set (`192.168.1.5/24`), it's changed to the network address and a notice says so.
 - `/31` counts as 2 usable hosts (RFC 3021) and `/32` as 1 host. Those rows carry a small note (shown next to Usable IPs, or Hosts if that one is hidden).
-- Divide is `aria-disabled` rather than `disabled` at `/32`, so keyboard focus isn't lost.
+- The Divide button shows the size of the resulting halves, e.g. "Divide /27" on a /26 row. At `/32` it just says "Divide" and is `aria-disabled` rather than `disabled`, so keyboard focus isn't lost.
 - Below Tailwind's `sm` width (40rem) the table becomes one card per subnet, indented by depth. Each internal node gets a "Join /N" button on the card where its bracket would start.
 - Export CSV includes the visible data columns (all five if none are visible), one row per subnet.
+- **Density:** the layout is compact. On windows at least 40rem wide with a mouse or trackpad (`pointer: fine`), buttons and inputs are 32px tall. On touch screens and narrow windows they stay 44px, as the spec requires. Controls are never smaller than WCAG 2.2's 24px minimum.
 - Per-row Copy buttons are icon-only with an `aria-label` ("Copy 192.168.0.0/24") and a tooltip on hover and focus (Esc closes it).
 - The Copy button sits to the left of each subnet address so the addresses line up.
 - **Network address** (open by default) and **Columns** (closed by default) are collapsible. The collapsed Network panel shows the current network. A validation error re-opens it so the field can take focus.
@@ -119,7 +120,7 @@ Run these before a release.
 
 - [ ] **Keyboard only:** Tab through the header, form, columns, buttons, and every row. Divide a subnet with Enter or Space: focus lands on the first new row's Divide button. Join: focus lands on the merged row's Divide button. Focus ring is visible everywhere. Esc closes a tooltip. Collapse and expand the Network and Columns panels with Enter or Space. The help button opens a dialog that traps focus and returns it to the button when closed.
 - [ ] **Screen reader** (VoiceOver or NVDA): icons aren't read; Divide and Join announce with the subnet name ("Join into 192.168.0.0/23"); the live region says "Divided ... into two /25 subnets"; "Link copied" is announced; field errors are read with the field.
-- [ ] **320px width:** no horizontal page scroll; cards indent by depth; all buttons at least 44x44px.
+- [ ] **320px width:** no horizontal page scroll; cards indent by depth; all buttons at least 44x44px. Also check a touch device or a tablet in landscape: targets stay 44px there.
 - [ ] **Themes:** try Midnight, Paper, High Contrast, a light one (Candy) and a dark one (Matrix). Reload to check the choice is remembered and there's no flash.
 - [ ] **Windows High Contrast / forced colors:** icons, buttons and brackets are still visible.
 - [ ] **Link sharing:** divide a few rows, hide a column, Copy link, open it in a private window: same layout. The theme is not carried over.

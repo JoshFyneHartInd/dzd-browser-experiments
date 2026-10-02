@@ -96,7 +96,7 @@ export function createUI(h) {
   // ---- columns -----------------------------------------------------------
   function buildColumnChecks() {
     els.columns.innerHTML = COLUMNS.map((c) => `
-      <label class="inline-flex min-h-11 items-center gap-2 text-sm">
+      <label class="inline-flex tap items-center gap-2 text-sm">
         <input type="checkbox" data-col="${c.id}" class="size-5 accent-accent">${c.label}
       </label>`).join('');
   }
@@ -118,9 +118,12 @@ export function createUI(h) {
   }
 
   function divideButton(cidr, node) {
-    const disabled = canDivide(node) ? 'false' : 'true';
-    return `<button type="button" class="btn" data-action="divide" data-cidr="${cidr}" aria-disabled="${disabled}"
-      aria-label="Divide ${cidr}">${icon('call_split')}Divide</button>`;
+    const can = canDivide(node);
+    // Show the size of the two halves, e.g. "Divide /27" for a /26. A /32 has no halves.
+    const size = can ? ` /${node.bits + 1}` : '';
+    const name = can ? `Divide${size} (split ${cidr})` : `Divide ${cidr}`;
+    return `<button type="button" class="btn whitespace-nowrap" data-action="divide" data-cidr="${cidr}" aria-disabled="${!can}"
+      aria-label="${name}">${icon('call_split')}<span>Divide${size}</span></button>`;
   }
 
   function noteHtml(info, cols) {
@@ -140,9 +143,9 @@ export function createUI(h) {
     const root = rows.length ? `Subnets of ${nodeCidr(model.root)}` : 'Subnets';
     let h = '<div class="overflow-x-auto rounded-lg border border-border bg-surface"><table class="w-full border-separate border-spacing-0 text-left text-sm">';
     h += `<caption class="sr-only">${root}</caption><thead><tr class="bg-surface-2">`;
-    for (const id of dataCols) h += `<th scope="col" class="px-2.5 py-2 font-semibold whitespace-nowrap">${LABELS[id]}</th>`;
-    if (cols.divide) h += `<th scope="col" class="px-2.5 py-2 font-semibold">${LABELS.divide}</th>`;
-    if (showJoin) h += `<th scope="col" colspan="${maxDepth}" class="px-2.5 py-2 font-semibold">${LABELS.join}</th>`;
+    for (const id of dataCols) h += `<th scope="col" class="px-2 py-1.5 font-semibold whitespace-nowrap">${LABELS[id]}</th>`;
+    if (cols.divide) h += `<th scope="col" class="px-2 py-1.5 font-semibold">${LABELS.divide}</th>`;
+    if (showJoin) h += `<th scope="col" colspan="${maxDepth}" class="px-2 py-1.5 font-semibold">${LABELS.join}</th>`;
     h += '</tr></thead><tbody>';
     rows.forEach((row, index) => {
       const info = subnetInfo(row.node.addr, row.node.bits);
@@ -151,12 +154,12 @@ export function createUI(h) {
       for (const id of dataCols) {
         const note = noteIn === id ? noteHtml(info, cols) : '';
         if (id === 'subnet') {
-          h += `<th scope="row" class="border-t border-border px-2.5 py-1 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-2">${copyButton(cidr)}<span class="font-mono">${cidr}</span></span></th>`;
+          h += `<th scope="row" class="border-t border-border px-2 py-0.5 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-2">${copyButton(cidr)}<span class="font-mono">${cidr}</span></span></th>`;
         } else {
-          h += `<td class="border-t border-border px-2.5 py-1 ${id === 'hosts' ? 'text-right ' : ''}font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}</td>`;
+          h += `<td class="border-t border-border px-2 py-0.5 ${id === 'hosts' ? 'text-right ' : ''}font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}</td>`;
         }
       }
-      if (cols.divide) h += `<td class="border-t border-border px-2.5 py-1">${divideButton(cidr, row.node)}</td>`;
+      if (cols.divide) h += `<td class="border-t border-border px-2 py-0.5">${divideButton(cidr, row.node)}</td>`;
       if (showJoin) {
         if (row.depth < maxDepth) h += `<td colspan="${maxDepth - row.depth}" class="border-t border-border"></td>`;
         for (const j of row.joins) {
@@ -171,34 +174,35 @@ export function createUI(h) {
 
   function cardsHtml(rows, cols) {
     const noteIn = noteColumn(cols);
-    let h = '<ol class="m-0 list-none space-y-3 p-0">';
+    // Card order puts the short fields side by side: netmask | hosts, then the two ranges full width.
+    const CARD_FIELDS = ['netmask', 'hosts', 'range', 'usable'];
+    let h = '<ol class="m-0 list-none space-y-2 p-0">';
     for (const row of rows) {
       const info = subnetInfo(row.node.addr, row.node.bits);
       const cidr = info.cidr;
-      const indent = Math.min(row.depth, 5) * 0.75;
-      const fields = DATA_COLUMNS.filter((id) => id !== 'subnet' && cols[id]);
-      h += `<li data-row="${cidr}" tabindex="-1" class="card rounded-lg border border-border bg-surface p-3" style="margin-left:${indent}rem">`;
+      const indent = Math.min(row.depth, 5) * 0.5;
+      const fields = CARD_FIELDS.filter((id) => cols[id]);
+      h += `<li data-row="${cidr}" tabindex="-1" class="card rounded-lg border border-border bg-surface p-2.5" style="margin-left:${indent}rem">`;
+      // Header: copy, address, and Divide on the right, all on one line.
       h += '<div class="flex items-center gap-2">';
       if (cols.subnet) h += copyButton(cidr);
-      h += `<h3 class="card-title font-mono text-base font-semibold${cols.subnet ? '' : ' sr-only'}">${cidr}</h3>`;
+      h += `<h3 class="card-title min-w-0 flex-1 font-mono text-base font-semibold${cols.subnet ? '' : ' sr-only'}">${cidr}</h3>`;
+      if (cols.divide) h += `<span class="ml-auto">${divideButton(cidr, row.node)}</span>`;
       h += '</div>';
       if (fields.length) {
-        h += '<dl class="mt-2 space-y-2">';
+        h += '<dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">';
         for (const id of fields) {
-          h += `<div><dt class="text-xs text-fg-muted">${LABELS[id]}</dt><dd class="font-mono text-sm tabular-nums" style="overflow-wrap:anywhere">${value(id, info)}</dd></div>`;
+          const span = id === 'range' || id === 'usable' ? ' col-span-2' : '';
+          h += `<div class="min-w-0${span}"><dt class="text-xs text-fg-muted">${LABELS[id]}</dt><dd class="font-mono text-sm tabular-nums" style="overflow-wrap:anywhere">${value(id, info)}</dd></div>`;
         }
         h += '</dl>';
       }
       if (info.note && noteIn) h += noteHtml(info, cols);
-      const showJoin = cols.join && row.joins.length > 0;
-      if (cols.divide || showJoin) {
-        h += '<div class="mt-3 flex flex-wrap gap-2">';
-        if (cols.divide) h += divideButton(cidr, row.node);
-        if (showJoin) {
-          for (const j of row.joins) {
-            const jc = nodeCidr(j.node);
-            h += `<button type="button" class="bracket bracket-inline" data-action="join" data-cidr="${jc}" data-parity="${j.depth % 2}" aria-label="Join into ${jc}">${icon('merge')}<span>Join /${j.node.bits}</span></button>`;
-          }
+      if (cols.join && row.joins.length > 0) {
+        h += '<div class="mt-2 flex flex-wrap gap-2">';
+        for (const j of row.joins) {
+          const jc = nodeCidr(j.node);
+          h += `<button type="button" class="bracket bracket-inline" data-action="join" data-cidr="${jc}" data-parity="${j.depth % 2}" aria-label="Join into ${jc}">${icon('merge')}<span>Join /${j.node.bits}</span></button>`;
         }
         h += '</div>';
       }

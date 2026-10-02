@@ -50,13 +50,13 @@
   <a href="#main" class="skip-link">Skip to content</a>
 
   <header class="border-b border-border bg-surface">
-    <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+    <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
       <h1 class="text-xl font-semibold">Visual Subnet Calculator</h1>
       <div class="flex items-center gap-2">
         <label for="theme-select" class="inline-flex items-center gap-1.5 text-sm text-fg-muted">
           <span class="icon" aria-hidden="true">palette</span>Theme
         </label>
-        <select id="theme-select" class="min-h-11 rounded-md border border-fg-muted bg-surface px-2 text-fg"></select>
+        <select id="theme-select" class="tap rounded-md border border-fg-muted bg-surface px-2 text-fg"></select>
         <button type="button" id="help-button" class="btn btn-icon" aria-label="How to use" aria-haspopup="dialog" data-tip="How to use">
           <span class="icon" aria-hidden="true">help</span>
         </button>
@@ -64,27 +64,27 @@
     </div>
   </header>
 
-  <main id="main" class="w-full flex-1 space-y-5 px-4 py-6 sm:px-6 lg:px-8">
+  <main id="main" class="w-full flex-1 space-y-3 px-4 py-4 sm:px-6 lg:px-8">
     <noscript>
       <p class="rounded-md border border-border bg-surface p-3">This calculator needs JavaScript. Please turn it on and reload the page.</p>
     </noscript>
 
     <section class="space-y-3">
       <details id="network-details" class="disclosure group rounded-lg border border-border bg-surface" open>
-        <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-4 py-2 font-medium">
+        <summary class="flex tap cursor-pointer items-center justify-between gap-2 px-4 py-2 font-medium">
           <span class="flex flex-wrap items-baseline gap-x-3">
             <span>Network address</span>
             <span id="network-summary" class="font-mono text-sm font-normal text-fg-muted"></span>
           </span>
           <span class="icon group-open:rotate-180" aria-hidden="true">expand_more</span>
         </summary>
-        <div class="border-t border-border p-4">
+        <div class="border-t border-border p-3">
           <form id="network-form" novalidate aria-label="Network" class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-start lg:grid-cols-[minmax(0,24rem)_9rem_auto] lg:justify-start">
             <div>
               <label for="address" class="mb-1 block text-sm font-medium">Network address</label>
               <input id="address" name="address" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"
                 aria-describedby="address-help address-error"
-                class="field w-full min-h-11 rounded-md border border-fg-muted bg-surface px-3 font-mono text-fg">
+                class="field w-full tap rounded-md border border-fg-muted bg-surface px-3 font-mono text-fg">
               <p id="address-help" class="mt-1 text-sm text-fg-muted">For example 192.168.0.0. You can also paste 10.0.0.0/16.</p>
               <p id="address-error" class="msg mt-1" hidden></p>
             </div>
@@ -92,7 +92,7 @@
               <label for="mask" class="mb-1 block text-sm font-medium">Mask bits (0 to 32)</label>
               <input id="mask" name="mask" type="text" inputmode="numeric" autocomplete="off" spellcheck="false"
                 aria-describedby="mask-error"
-                class="field w-full min-h-11 rounded-md border border-fg-muted bg-surface px-3 font-mono text-fg">
+                class="field w-full tap rounded-md border border-fg-muted bg-surface px-3 font-mono text-fg">
               <p id="mask-error" class="msg mt-1" hidden></p>
             </div>
             <div class="flex gap-2 sm:pt-6">
@@ -106,11 +106,11 @@
     </section>
 
     <details id="columns-details" class="disclosure group rounded-lg border border-border bg-surface">
-      <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-4 py-2 font-medium">
+      <summary class="flex tap cursor-pointer items-center justify-between gap-2 px-4 py-2 font-medium">
         <span class="inline-flex items-center gap-1.5"><span class="icon" aria-hidden="true">view_column</span>Columns</span>
         <span class="icon group-open:rotate-180" aria-hidden="true">expand_more</span>
       </summary>
-      <div class="border-t border-border px-4 py-2">
+      <div class="border-t border-border px-4 py-1">
         <fieldset>
           <legend class="sr-only">Columns to show</legend>
           <div id="columns" class="flex flex-wrap gap-x-4 gap-y-0"></div>
