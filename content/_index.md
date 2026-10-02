@@ -29,6 +29,11 @@ url = '/pixelzip/'
 description = 'Optimize images for the web and beyond'
 
 [[links]]
+title = 'Modern Visual Subnet Calculator'
+url = '/visual-subnet-calc/'
+description = 'Calculate subnets visually'
+
+[[links]]
 title = 'Windcraft'
 url = '/windcraft/'
 description = 'A Tailwind theme creator'
