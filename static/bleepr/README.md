@@ -31,6 +31,7 @@ js/presets.js       chip presets
 js/rtttl.js         RTTTL parse/serialize
 js/share.js         RTMX1 wrapper, URL hash
 js/examples.js      built-in public-domain examples
+js/welcome.js       first-launch tour (reopen with the Help button)
 ```
 
 ## Notes on the spec

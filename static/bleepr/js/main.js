@@ -12,6 +12,7 @@ import { parseRTTTL } from './rtttl.js';
 import { isWrapper, encodeWrapper, decodeWrapper, layerToRTTTL, toHash, fromHash } from './share.js';
 import { mountThemePicker } from './theme-picker.js';
 import { EXAMPLES } from './examples.js';
+import { mountWelcome } from './welcome.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const icon = (name) => `<span class="material-symbols-outlined" aria-hidden="true">${name}</span>`;
@@ -819,7 +820,14 @@ if (!storage.get('bleepr.current.v1') && !fromHash(location.hash)) {
   if (res.ok) store.replace(res.project, { history: false, dirty: false });
 }
 
+// ---------- welcome tour ----------
+const welcome = mountWelcome();
+$('#btn-help').addEventListener('click', () => welcome.open());
+
 renderHeader();
 renderLayers();
 renderTransport();
-loadFromHash();
+loadFromHash().then(() => {
+  // First visit: show the tour unless a shared-tune prompt is already open.
+  if (!welcome.seen && !document.querySelector('dialog[open]')) welcome.open();
+});
