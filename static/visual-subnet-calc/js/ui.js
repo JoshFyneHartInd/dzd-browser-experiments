@@ -25,7 +25,8 @@ export function createUI(h) {
     addressError: $('address-error'), maskError: $('mask-error'),
     notice: $('notice'), feedback: $('feedback'), live: $('live'),
     results: $('results'), summary: $('summary'), columns: $('columns'),
-    reset: $('reset'), copyLink: $('copy-link'), exportCsv: $('export-csv'), tooltip: $('tooltip'),
+    reset: $('reset'), networkDetails: $('network-details'), networkSummary: $('network-summary'),
+    helpButton: $('help-button'), helpDialog: $('help-dialog'), helpClose: $('help-close'), copyLink: $('copy-link'), exportCsv: $('export-csv'), tooltip: $('tooltip'),
   };
   const wide = matchMedia('(min-width: 40rem)'); // Tailwind's `sm`
 
@@ -76,7 +77,11 @@ export function createUI(h) {
     els.mask.toggleAttribute('aria-invalid', Boolean(errors.mask));
     if (errors.address) els.address.setAttribute('aria-invalid', 'true');
     if (errors.mask) els.mask.setAttribute('aria-invalid', 'true');
-    (errors.address ? els.address : errors.mask ? els.mask : null)?.focus();
+    const bad = errors.address ? els.address : errors.mask ? els.mask : null;
+    if (bad) {
+      els.networkDetails.open = true; // the field must be visible to take focus
+      bad.focus();
+    }
   }
 
   function clearErrors() {
@@ -135,9 +140,9 @@ export function createUI(h) {
     const root = rows.length ? `Subnets of ${nodeCidr(model.root)}` : 'Subnets';
     let h = '<div class="overflow-x-auto rounded-lg border border-border bg-surface"><table class="w-full border-separate border-spacing-0 text-left text-sm">';
     h += `<caption class="sr-only">${root}</caption><thead><tr class="bg-surface-2">`;
-    for (const id of dataCols) h += `<th scope="col" class="px-3 py-2 font-semibold whitespace-nowrap">${LABELS[id]}</th>`;
-    if (cols.divide) h += `<th scope="col" class="px-3 py-2 font-semibold">${LABELS.divide}</th>`;
-    if (showJoin) h += `<th scope="col" colspan="${maxDepth}" class="px-3 py-2 font-semibold">${LABELS.join}</th>`;
+    for (const id of dataCols) h += `<th scope="col" class="px-2.5 py-2 font-semibold whitespace-nowrap">${LABELS[id]}</th>`;
+    if (cols.divide) h += `<th scope="col" class="px-2.5 py-2 font-semibold">${LABELS.divide}</th>`;
+    if (showJoin) h += `<th scope="col" colspan="${maxDepth}" class="px-2.5 py-2 font-semibold">${LABELS.join}</th>`;
     h += '</tr></thead><tbody>';
     rows.forEach((row, index) => {
       const info = subnetInfo(row.node.addr, row.node.bits);
@@ -146,12 +151,12 @@ export function createUI(h) {
       for (const id of dataCols) {
         const note = noteIn === id ? noteHtml(info, cols) : '';
         if (id === 'subnet') {
-          h += `<th scope="row" class="border-t border-border px-3 py-1 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-1"><span class="font-mono">${cidr}</span>${copyButton(cidr)}</span></th>`;
+          h += `<th scope="row" class="border-t border-border px-2.5 py-1 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-2">${copyButton(cidr)}<span class="font-mono">${cidr}</span></span></th>`;
         } else {
-          h += `<td class="border-t border-border px-3 py-1 ${id === 'hosts' ? 'text-right ' : ''}font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}</td>`;
+          h += `<td class="border-t border-border px-2.5 py-1 ${id === 'hosts' ? 'text-right ' : ''}font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}</td>`;
         }
       }
-      if (cols.divide) h += `<td class="border-t border-border px-3 py-1">${divideButton(cidr, row.node)}</td>`;
+      if (cols.divide) h += `<td class="border-t border-border px-2.5 py-1">${divideButton(cidr, row.node)}</td>`;
       if (showJoin) {
         if (row.depth < maxDepth) h += `<td colspan="${maxDepth - row.depth}" class="border-t border-border"></td>`;
         for (const j of row.joins) {
@@ -173,9 +178,9 @@ export function createUI(h) {
       const indent = Math.min(row.depth, 5) * 0.75;
       const fields = DATA_COLUMNS.filter((id) => id !== 'subnet' && cols[id]);
       h += `<li data-row="${cidr}" tabindex="-1" class="card rounded-lg border border-border bg-surface p-3" style="margin-left:${indent}rem">`;
-      h += '<div class="flex items-center justify-between gap-2">';
-      h += `<h3 class="card-title font-mono text-base font-semibold${cols.subnet ? '' : ' sr-only'}">${cidr}</h3>`;
+      h += '<div class="flex items-center gap-2">';
       if (cols.subnet) h += copyButton(cidr);
+      h += `<h3 class="card-title font-mono text-base font-semibold${cols.subnet ? '' : ' sr-only'}">${cidr}</h3>`;
       h += '</div>';
       if (fields.length) {
         h += '<dl class="mt-2 space-y-2">';
@@ -252,19 +257,19 @@ export function createUI(h) {
     }, delay);
   }
 
-  els.results.addEventListener('mouseover', (e) => {
-    const b = e.target.closest('[data-tip]');
+  document.addEventListener('mouseover', (e) => {
+    const b = e.target.closest?.('[data-tip]');
     if (b) showTip(b);
   });
-  els.results.addEventListener('mouseout', (e) => {
-    if (e.target.closest('[data-tip]')) hideTip(150);
+  document.addEventListener('mouseout', (e) => {
+    if (e.target.closest?.('[data-tip]')) hideTip(150);
   });
-  els.results.addEventListener('focusin', (e) => {
-    const b = e.target.closest('[data-tip]');
+  document.addEventListener('focusin', (e) => {
+    const b = e.target.closest?.('[data-tip]');
     if (b) showTip(b);
   });
-  els.results.addEventListener('focusout', (e) => {
-    if (e.target.closest('[data-tip]')) hideTip(0);
+  document.addEventListener('focusout', (e) => {
+    if (e.target.closest?.('[data-tip]')) hideTip(0);
   });
   els.tooltip.addEventListener('mouseenter', () => clearTimeout(tipTimer));
   els.tooltip.addEventListener('mouseleave', () => hideTip(0));
@@ -299,6 +304,19 @@ export function createUI(h) {
     }, 0);
   });
 
+  els.helpButton.addEventListener('click', () => {
+    hideTip(0);
+    if (typeof els.helpDialog.showModal === 'function') els.helpDialog.showModal();
+    else els.helpDialog.setAttribute('open', '');
+  });
+  els.helpClose.addEventListener('click', () => els.helpDialog.close());
+  // A click on the dimmed backdrop (the dialog element itself) closes it too.
+  els.helpDialog.addEventListener('click', (e) => { if (e.target === els.helpDialog) els.helpDialog.close(); });
+
+  function setNetworkSummary(text) {
+    els.networkSummary.textContent = text;
+  }
+
   els.reset.addEventListener('click', () => h.onReset());
   els.copyLink.addEventListener('click', () => h.onCopyLink());
   els.exportCsv.addEventListener('click', () => h.onExport());
@@ -310,5 +328,5 @@ export function createUI(h) {
 
   buildColumnChecks();
 
-  return { render, focusRow, announce, setFeedback, setNotice, showErrors, clearErrors, setInputs, setColumns, getColumns };
+  return { render, focusRow, announce, setFeedback, setNotice, showErrors, clearErrors, setInputs, setColumns, getColumns, setNetworkSummary };
 }

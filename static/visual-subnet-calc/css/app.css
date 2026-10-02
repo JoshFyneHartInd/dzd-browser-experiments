@@ -69,7 +69,7 @@ tr:focus-visible, li:focus-visible { box-shadow: none; outline-offset: -3px; }
 .bracket[data-parity='1'] { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
 /* 18% instead of 25%: --fg stays at 4.5:1 on the hover tint in every bundled theme. */
 .bracket:hover, .bracket:focus-visible { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); border-left-width: 5px; }
-.join-cell { position: relative; min-width: 4.25rem; padding: 2px; }
+.join-cell { position: relative; min-width: 3.5rem; padding: 2px; }
 .join-cell > .bracket { position: absolute; inset: 2px; flex-direction: column; }
 .bracket-inline { min-height: 44px; padding: 0 0.875rem; }
 
@@ -81,6 +81,17 @@ tr:focus-visible, li:focus-visible { box-shadow: none; outline-offset: -3px; }
   font-size: 0.8125rem; line-height: 1.3; white-space: nowrap;
 }
 .tooltip[hidden] { display: none; }
+
+/* ---- Collapsible panels and the help dialog ---- */
+.disclosure > summary { list-style: none; }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.help-dialog {
+  margin: auto; padding: 0;
+  width: calc(100% - 2rem); max-width: 34rem; max-height: calc(100dvh - 2rem); overflow: auto;
+  background: var(--surface); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 0.5rem;
+}
+.help-dialog::backdrop { background: color-mix(in srgb, var(--bg) 75%, transparent); }
 
 /* ---- Cards (narrow screens) ---- */
 .card-title { overflow-wrap: anywhere; }

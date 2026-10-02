@@ -93,6 +93,7 @@ function reset() {
 
 function commit() {
   persist();
+  ui.setNetworkSummary(nodeCidr(root));
   ui.render({ root, cols });
 }
 

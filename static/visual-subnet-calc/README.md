@@ -75,6 +75,9 @@ Host bits in `n` are cleared when a link is read. Links from the original tool's
 - Below Tailwind's `sm` width (40rem) the table becomes one card per subnet, indented by depth. Each internal node gets a "Join /N" button on the card where its bracket would start.
 - Export CSV includes the visible data columns (all five if none are visible), one row per subnet.
 - Per-row Copy buttons are icon-only with an `aria-label` ("Copy 192.168.0.0/24") and a tooltip on hover and focus (Esc closes it).
+- The Copy button sits to the left of each subnet address so the addresses line up.
+- **Network address** (open by default) and **Columns** (closed by default) are collapsible. The collapsed Network panel shows the current network. A validation error re-opens it so the field can take focus.
+- **How to use** is the help icon next to the theme picker. It opens a dialog (Esc, the Close button or a click outside closes it). Like the Copy buttons, it is icon-only with an `aria-label` and a tooltip.
 
 ## Theme contrast
 
@@ -114,7 +117,7 @@ The other 32 themes pass every pair.
 
 Run these before a release.
 
-- [ ] **Keyboard only:** Tab through the header, form, columns, buttons, and every row. Divide a subnet with Enter or Space: focus lands on the first new row's Divide button. Join: focus lands on the merged row's Divide button. Focus ring is visible everywhere. Esc closes a tooltip.
+- [ ] **Keyboard only:** Tab through the header, form, columns, buttons, and every row. Divide a subnet with Enter or Space: focus lands on the first new row's Divide button. Join: focus lands on the merged row's Divide button. Focus ring is visible everywhere. Esc closes a tooltip. Collapse and expand the Network and Columns panels with Enter or Space. The help button opens a dialog that traps focus and returns it to the button when closed.
 - [ ] **Screen reader** (VoiceOver or NVDA): icons aren't read; Divide and Join announce with the subnet name ("Join into 192.168.0.0/23"); the live region says "Divided ... into two /25 subnets"; "Link copied" is announced; field errors are read with the field.
 - [ ] **320px width:** no horizontal page scroll; cards indent by depth; all buttons at least 44x44px.
 - [ ] **Themes:** try Midnight, Paper, High Contrast, a light one (Candy) and a dark one (Matrix). Reload to check the choice is remembered and there's no flash.

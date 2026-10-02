@@ -50,55 +50,73 @@
   <a href="#main" class="skip-link">Skip to content</a>
 
   <header class="border-b border-border bg-surface">
-    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+    <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
       <h1 class="text-xl font-semibold">Visual Subnet Calculator</h1>
       <div class="flex items-center gap-2">
         <label for="theme-select" class="inline-flex items-center gap-1.5 text-sm text-fg-muted">
           <span class="icon" aria-hidden="true">palette</span>Theme
         </label>
         <select id="theme-select" class="min-h-11 rounded-md border border-fg-muted bg-surface px-2 text-fg"></select>
+        <button type="button" id="help-button" class="btn btn-icon" aria-label="How to use" aria-haspopup="dialog" data-tip="How to use">
+          <span class="icon" aria-hidden="true">help</span>
+        </button>
       </div>
     </div>
   </header>
 
-  <main id="main" class="mx-auto w-full max-w-6xl flex-1 space-y-5 px-4 py-6">
+  <main id="main" class="w-full flex-1 space-y-5 px-4 py-6 sm:px-6 lg:px-8">
     <noscript>
       <p class="rounded-md border border-border bg-surface p-3">This calculator needs JavaScript. Please turn it on and reload the page.</p>
     </noscript>
 
-    <section class="rounded-lg border border-border bg-surface p-4">
-      <form id="network-form" novalidate aria-label="Network" class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-start">
-        <div>
-          <label for="address" class="mb-1 block text-sm font-medium">Network address</label>
-          <input id="address" name="address" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"
-            aria-describedby="address-help address-error"
-            class="field w-full min-h-11 rounded-md border border-fg-muted bg-surface px-3 font-mono text-fg">
-          <p id="address-help" class="mt-1 text-sm text-fg-muted">For example 192.168.0.0. You can also paste 10.0.0.0/16.</p>
-          <p id="address-error" class="msg mt-1" hidden></p>
+    <section class="space-y-3">
+      <details id="network-details" class="disclosure group rounded-lg border border-border bg-surface" open>
+        <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-4 py-2 font-medium">
+          <span class="flex flex-wrap items-baseline gap-x-3">
+            <span>Network address</span>
+            <span id="network-summary" class="font-mono text-sm font-normal text-fg-muted"></span>
+          </span>
+          <span class="icon group-open:rotate-180" aria-hidden="true">expand_more</span>
+        </summary>
+        <div class="border-t border-border p-4">
+          <form id="network-form" novalidate aria-label="Network" class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-start lg:grid-cols-[minmax(0,24rem)_9rem_auto] lg:justify-start">
+            <div>
+              <label for="address" class="mb-1 block text-sm font-medium">Network address</label>
+              <input id="address" name="address" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"
+                aria-describedby="address-help address-error"
+                class="field w-full min-h-11 rounded-md border border-fg-muted bg-surface px-3 font-mono text-fg">
+              <p id="address-help" class="mt-1 text-sm text-fg-muted">For example 192.168.0.0. You can also paste 10.0.0.0/16.</p>
+              <p id="address-error" class="msg mt-1" hidden></p>
+            </div>
+            <div>
+              <label for="mask" class="mb-1 block text-sm font-medium">Mask bits (0 to 32)</label>
+              <input id="mask" name="mask" type="text" inputmode="numeric" autocomplete="off" spellcheck="false"
+                aria-describedby="mask-error"
+                class="field w-full min-h-11 rounded-md border border-fg-muted bg-surface px-3 font-mono text-fg">
+              <p id="mask-error" class="msg mt-1" hidden></p>
+            </div>
+            <div class="flex gap-2 sm:pt-6">
+              <button type="submit" class="btn btn-primary">Update</button>
+              <button type="button" id="reset" class="btn"><span class="icon" aria-hidden="true">restart_alt</span>Reset</button>
+            </div>
+          </form>
         </div>
-        <div>
-          <label for="mask" class="mb-1 block text-sm font-medium">Mask bits (0 to 32)</label>
-          <input id="mask" name="mask" type="text" inputmode="numeric" autocomplete="off" spellcheck="false"
-            aria-describedby="mask-error"
-            class="field w-full min-h-11 rounded-md border border-fg-muted bg-surface px-3 font-mono text-fg">
-          <p id="mask-error" class="msg mt-1" hidden></p>
-        </div>
-        <div class="flex gap-2 sm:pt-6">
-          <button type="submit" class="btn btn-primary">Update</button>
-          <button type="button" id="reset" class="btn"><span class="icon" aria-hidden="true">restart_alt</span>Reset</button>
-        </div>
-      </form>
-      <p id="notice" class="msg mt-3" hidden></p>
+      </details>
+      <p id="notice" class="msg" hidden></p>
     </section>
 
-    <section class="rounded-lg border border-border bg-surface p-4">
-      <fieldset>
-        <legend class="mb-1 inline-flex items-center gap-1.5 text-sm font-medium">
-          <span class="icon" aria-hidden="true">view_column</span>Columns
-        </legend>
-        <div id="columns" class="flex flex-wrap gap-x-4 gap-y-0"></div>
-      </fieldset>
-    </section>
+    <details id="columns-details" class="disclosure group rounded-lg border border-border bg-surface">
+      <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-4 py-2 font-medium">
+        <span class="inline-flex items-center gap-1.5"><span class="icon" aria-hidden="true">view_column</span>Columns</span>
+        <span class="icon group-open:rotate-180" aria-hidden="true">expand_more</span>
+      </summary>
+      <div class="border-t border-border px-4 py-2">
+        <fieldset>
+          <legend class="sr-only">Columns to show</legend>
+          <div id="columns" class="flex flex-wrap gap-x-4 gap-y-0"></div>
+        </fieldset>
+      </div>
+    </details>
 
     <section aria-labelledby="results-heading" class="space-y-3">
       <h2 id="results-heading" class="sr-only">Subnets</h2>
@@ -112,27 +130,27 @@
       <p id="feedback" class="msg" hidden></p>
       <div id="results"></div>
     </section>
-
-    <details class="group rounded-lg border border-border bg-surface">
-      <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 py-2 font-medium">
-        <span class="inline-flex items-center gap-1.5"><span class="icon" aria-hidden="true">help</span>How to use</span>
-        <span class="icon group-open:rotate-180" aria-hidden="true">expand_more</span>
-      </summary>
-      <div class="space-y-2 border-t border-border px-4 py-3 text-sm">
-        <p><strong>Divide</strong> splits a subnet into two equal halves (one more mask bit). A /32 can't be divided.</p>
-        <p><strong>Join</strong> brackets sit to the right of the table. Each bracket covers the rows that came from one parent subnet and is labelled with the parent's mask, for example /23. Press it to merge those rows back into the parent.</p>
-        <p>Use <strong>Columns</strong> to show or hide parts of the table. <strong>Copy link</strong> gives you a link that restores the exact layout. The theme isn't part of the link.</p>
-        <p>/31 networks are counted as 2 usable hosts (RFC 3021) and /32 as 1 host.</p>
-      </div>
-    </details>
   </main>
 
   <footer class="border-t border-border bg-surface">
-    <p class="mx-auto max-w-6xl px-4 py-4 text-sm">
+    <p class="px-4 py-4 text-sm sm:px-6 lg:px-8">
       Based on the work done here:
       <a class="link break-all" href="https://www.davidc.net/sites/default/subnets/subnets.html">https://www.davidc.net/sites/default/subnets/subnets.html</a>
     </p>
   </footer>
+
+  <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
+    <div class="space-y-3 p-5 text-sm">
+      <h2 id="help-title" class="text-lg font-semibold">How to use</h2>
+      <p><strong>Divide</strong> splits a subnet into two equal halves (one more mask bit). A /32 can't be divided.</p>
+      <p><strong>Join</strong> brackets sit to the right of the table. Each bracket covers the rows that came from one parent subnet and is labelled with the parent's mask, for example /23. Press it to merge those rows back into the parent.</p>
+      <p>Use <strong>Columns</strong> to show or hide parts of the table. <strong>Copy link</strong> gives you a link that restores the exact layout. The theme isn't part of the link.</p>
+      <p>/31 networks are counted as 2 usable hosts (RFC 3021) and /32 as 1 host.</p>
+      <div class="flex justify-end pt-1">
+        <button type="button" id="help-close" class="btn btn-primary">Close</button>
+      </div>
+    </div>
+  </dialog>
 
   <div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   <div id="tooltip" class="tooltip" aria-hidden="true" hidden></div>
