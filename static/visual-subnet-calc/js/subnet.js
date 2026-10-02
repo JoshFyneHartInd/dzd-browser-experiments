@@ -219,3 +219,31 @@ export function toCsv(root, columns) {
   }
   return lines.join('\r\n') + '\r\n';
 }
+
+/** Machine-readable export: every field for every subnet, in address order. */
+export function toJson(root) {
+  const subnets = leaves(root).map((leaf) => {
+    const i = subnetInfo(leaf.addr, leaf.bits);
+    return {
+      cidr: i.cidr,
+      address: i.address,
+      prefixLength: i.bits,
+      netmask: i.netmask,
+      firstAddress: i.firstText,
+      lastAddress: i.lastText,
+      firstUsable: i.usableFirstText,
+      lastUsable: i.usableLastText,
+      usableHosts: i.hosts,
+    };
+  });
+  return JSON.stringify(
+    { network: nodeCidr(root), subnetCount: subnets.length, totalUsableHosts: totalHosts(root), subnets },
+    null,
+    2,
+  ) + '\n';
+}
+
+/** Fraction of the whole network a node covers: 1 for the root, 0.5 for a half, and so on. */
+export function sizeShare(node, root) {
+  return 2 ** (root.bits - node.bits);
+}

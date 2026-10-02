@@ -8,7 +8,7 @@ export const COLUMNS = [
   { id: 'range', label: 'Range of addresses' },
   { id: 'usable', label: 'Usable IPs' },
   { id: 'hosts', label: 'Hosts' },
-  { id: 'divide', label: 'Divide' },
+  { id: 'divide', label: 'Split' },
   { id: 'join', label: 'Join' },
 ];
 

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseIPv4, formatIPv4, parseMaskBits, maskFromBits, networkOf, validateInput, subnetInfo,
-  createRoot, divide, join, canDivide, leaves, layoutRows, countLeaves, totalHosts, nodeCidr, toCsv,
+  createRoot, divide, join, canDivide, leaves, layoutRows, countLeaves, totalHosts, nodeCidr, toCsv, toJson, sizeShare,
 } from '../js/subnet.js';
 
 test('parseIPv4 accepts valid addresses, including ones above 128.0.0.0', () => {
@@ -192,4 +192,31 @@ test('toCsv quotes values and uses CRLF', () => {
     { label: 'Hosts, usable', value: (i) => String(i.hosts) },
   ]);
   assert.equal(csv, '"Subnet address","Hosts, usable"\r\n"192.168.0.0/25","126"\r\n"192.168.0.128/25","126"\r\n');
+});
+
+test('toJson lists every field for every subnet, including /31 and /32', () => {
+  const root = createRoot(parseIPv4('10.0.0.0'), 30);
+  divide(root);
+  divide(root.children[1]);
+  const out = JSON.parse(toJson(root));
+  assert.equal(out.network, '10.0.0.0/30');
+  assert.equal(out.subnetCount, 3);
+  assert.equal(out.totalUsableHosts, 2 + 1 + 1);
+  assert.deepEqual(out.subnets[0], {
+    cidr: '10.0.0.0/31', address: '10.0.0.0', prefixLength: 31, netmask: '255.255.255.254',
+    firstAddress: '10.0.0.0', lastAddress: '10.0.0.1', firstUsable: '10.0.0.0', lastUsable: '10.0.0.1', usableHosts: 2,
+  });
+  assert.equal(out.subnets[2].cidr, '10.0.0.3/32');
+  assert.equal(out.subnets[2].firstUsable, '10.0.0.3');
+  assert.equal(out.subnets[2].usableHosts, 1);
+});
+
+test('sizeShare is the fraction of the network a subnet covers', () => {
+  const root = createRoot(parseIPv4('192.168.0.0'), 24);
+  assert.equal(sizeShare(root, root), 1);
+  divide(root);
+  divide(root.children[1]);
+  assert.deepEqual(leaves(root).map((n) => sizeShare(n, root)), [0.5, 0.25, 0.25]);
+  const all = leaves(root).reduce((sum, n) => sum + sizeShare(n, root), 0);
+  assert.equal(all, 1);
 });

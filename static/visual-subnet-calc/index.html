@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Visual Subnet Calculator</title>
-  <meta name="description" content="Split an IPv4 network into subnets visually by dividing and joining rows.">
+  <meta name="description" content="Split an IPv4 network into subnets visually by splitting and joining rows.">
 
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/app.css">
@@ -125,6 +125,7 @@
         <div class="flex flex-wrap gap-2">
           <button type="button" id="copy-link" class="btn"><span class="icon" aria-hidden="true">link</span>Copy link</button>
           <button type="button" id="export-csv" class="btn"><span class="icon" aria-hidden="true">download</span>Export CSV</button>
+          <button type="button" id="export-json" class="btn"><span class="icon" aria-hidden="true">download</span>Export JSON</button>
         </div>
       </div>
       <p id="feedback" class="msg" hidden></p>
@@ -142,7 +143,7 @@
   <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
     <div class="space-y-3 p-5 text-sm">
       <h2 id="help-title" class="text-lg font-semibold">How to use</h2>
-      <p><strong>Divide</strong> splits a subnet into two equal halves (one more mask bit). A /32 can't be divided.</p>
+      <p><strong>Split</strong> cuts a subnet into two equal halves (one more mask bit). The button shows the row's current size, so a /26 row says "Split /26" and becomes two /27 rows. A /32 can't be split.</p>
       <p><strong>Join</strong> brackets sit to the right of the table. Each bracket covers the rows that came from one parent subnet and is labelled with the parent's mask, for example /23. Press it to merge those rows back into the parent.</p>
       <p>Use <strong>Columns</strong> to show or hide parts of the table. <strong>Copy link</strong> gives you a link that restores the exact layout. The theme isn't part of the link.</p>
       <p>/31 networks are counted as 2 usable hosts (RFC 3021) and /32 as 1 host.</p>

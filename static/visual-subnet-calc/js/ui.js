@@ -1,6 +1,6 @@
 // Rendering, events, focus and announcements. Holds no application state:
 // main.js owns the data and passes it to render().
-import { layoutRows, subnetInfo, canDivide, nodeCidr, totalHosts } from './subnet.js';
+import { layoutRows, subnetInfo, canDivide, nodeCidr, totalHosts, sizeShare } from './subnet.js';
 import { COLUMNS } from './state.js';
 
 const nf = new Intl.NumberFormat();
@@ -26,7 +26,7 @@ export function createUI(h) {
     notice: $('notice'), feedback: $('feedback'), live: $('live'),
     results: $('results'), summary: $('summary'), columns: $('columns'),
     reset: $('reset'), networkDetails: $('network-details'), networkSummary: $('network-summary'),
-    helpButton: $('help-button'), helpDialog: $('help-dialog'), helpClose: $('help-close'), copyLink: $('copy-link'), exportCsv: $('export-csv'), tooltip: $('tooltip'),
+    helpButton: $('help-button'), helpDialog: $('help-dialog'), helpClose: $('help-close'), copyLink: $('copy-link'), exportCsv: $('export-csv'), exportJson: $('export-json'), tooltip: $('tooltip'),
   };
   const wide = matchMedia('(min-width: 40rem)'); // Tailwind's `sm`
 
@@ -119,11 +119,10 @@ export function createUI(h) {
 
   function divideButton(cidr, node) {
     const can = canDivide(node);
-    // Show the size of the two halves, e.g. "Divide /27" for a /26. A /32 has no halves.
-    const size = can ? ` /${node.bits + 1}` : '';
-    const name = can ? `Divide${size} (split ${cidr})` : `Divide ${cidr}`;
+    // The label shows the row's current size, e.g. "Split /26" on a /26 row (it becomes two /27s).
+    const name = can ? `Split /${node.bits} subnet ${cidr} into two /${node.bits + 1} subnets` : `Split /${node.bits} subnet ${cidr} (can't be split further)`;
     return `<button type="button" class="btn whitespace-nowrap" data-action="divide" data-cidr="${cidr}" aria-disabled="${!can}"
-      aria-label="${name}">${icon('call_split')}<span>Divide${size}</span></button>`;
+      aria-label="${name}">${icon('call_split')}<span>Split /${node.bits}</span></button>`;
   }
 
   function noteHtml(info, cols) {
@@ -147,14 +146,15 @@ export function createUI(h) {
     if (cols.divide) h += `<th scope="col" class="px-2 py-1.5 font-semibold">${LABELS.divide}</th>`;
     if (showJoin) h += `<th scope="col" colspan="${maxDepth}" class="px-2 py-1.5 font-semibold">${LABELS.join}</th>`;
     h += '</tr></thead><tbody>';
-    rows.forEach((row, index) => {
+    rows.forEach((row) => {
       const info = subnetInfo(row.node.addr, row.node.bits);
       const cidr = info.cidr;
-      h += `<tr data-row="${cidr}" tabindex="-1" class="${index % 2 ? 'bg-surface-2' : 'bg-surface'}">`;
+      const share = sizeShare(row.node, model.root);
+      h += `<tr data-row="${cidr}" tabindex="-1" class="bg-surface hover:bg-surface-2">`;
       for (const id of dataCols) {
         const note = noteIn === id ? noteHtml(info, cols) : '';
         if (id === 'subnet') {
-          h += `<th scope="row" class="border-t border-border px-2 py-0.5 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-2">${copyButton(cidr)}<span class="font-mono">${cidr}</span></span></th>`;
+          h += `<th scope="row" class="size-cell border-t border-border px-2 py-0.5 pb-1 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-2">${copyButton(cidr)}<span class="font-mono">${cidr}</span></span><span class="size-bar" aria-hidden="true" style="--share:${share}"></span></th>`;
         } else {
           h += `<td class="border-t border-border px-2 py-0.5 ${id === 'hosts' ? 'text-right ' : ''}font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}</td>`;
         }
@@ -182,8 +182,8 @@ export function createUI(h) {
       const cidr = info.cidr;
       const indent = Math.min(row.depth, 5) * 0.5;
       const fields = CARD_FIELDS.filter((id) => cols[id]);
-      h += `<li data-row="${cidr}" tabindex="-1" class="card rounded-lg border border-border bg-surface p-2.5" style="margin-left:${indent}rem">`;
-      // Header: copy, address, and Divide on the right, all on one line.
+      h += `<li data-row="${cidr}" tabindex="-1" class="card rounded-lg border border-border bg-surface p-2.5" style="margin-left:${indent}rem;--indent:${indent}rem">`;
+      // Header: copy, address, and Split on the right, all on one line.
       h += '<div class="flex items-center gap-2">';
       if (cols.subnet) h += copyButton(cidr);
       h += `<h3 class="card-title min-w-0 flex-1 font-mono text-base font-semibold${cols.subnet ? '' : ' sr-only'}">${cidr}</h3>`;
@@ -206,6 +206,7 @@ export function createUI(h) {
         }
         h += '</div>';
       }
+      h += `<div class="size-track mt-2" aria-hidden="true"><span class="size-bar" style="--share:${sizeShare(row.node, model.root)}"></span></div>`;
       h += '</li>';
     }
     return h + '</ol>';
@@ -324,6 +325,7 @@ export function createUI(h) {
   els.reset.addEventListener('click', () => h.onReset());
   els.copyLink.addEventListener('click', () => h.onCopyLink());
   els.exportCsv.addEventListener('click', () => h.onExport());
+  els.exportJson.addEventListener('click', () => h.onExportJson());
   els.columns.addEventListener('change', (e) => {
     const cb = e.target.closest('input[data-col]');
     if (cb) h.onColumns(getColumns(), cb.dataset.col, cb.checked);

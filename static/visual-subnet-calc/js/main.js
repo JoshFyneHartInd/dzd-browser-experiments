@@ -1,7 +1,7 @@
 // Wiring: owns the app state, connects the pure modules to the UI.
 import { initThemePicker } from './theme-picker.js';
 import {
-  validateInput, createRoot, divide, join, countLeaves, nodeCidr, formatIPv4, parseIPv4, toCsv,
+  validateInput, createRoot, divide, join, countLeaves, nodeCidr, formatIPv4, parseIPv4, toCsv, toJson,
 } from './subnet.js';
 import { COLUMNS, defaultColumns, encodeState, decodeState } from './state.js';
 import { createUI } from './ui.js';
@@ -27,7 +27,7 @@ const ui = createUI({
     ui.setFeedback('', '');
     commit();
     ui.focusRow(nodeCidr(node.children[0]));
-    ui.announce(`Divided ${nodeCidr(node)} into two /${node.children[0].bits} subnets.`);
+    ui.announce(`Split ${nodeCidr(node)} into two /${node.children[0].bits} subnets.`);
   },
   onJoin(node) {
     if (!node) return;
@@ -51,12 +51,18 @@ const ui = createUI({
     if (await copyText(shareUrl())) ui.setFeedback('success', 'Link copied to the clipboard.');
     else ui.setFeedback('error', "Couldn't copy automatically. Copy the link from the address bar instead.");
   },
+  onExportJson() {
+    const name = `subnets-${formatIPv4(root.addr)}-${root.bits}.json`;
+    download(name, toJson(root), 'application/json');
+    const n = countLeaves(root);
+    ui.setFeedback('success', `Exported ${n} ${n === 1 ? 'subnet' : 'subnets'} to ${name}.`);
+  },
   onExport() {
     const visible = COLUMNS.filter((c) => c.id in CSV_COLUMNS && cols[c.id]);
     const chosen = visible.length ? visible : COLUMNS.filter((c) => c.id in CSV_COLUMNS);
     const csv = toCsv(root, chosen.map((c) => ({ label: c.label, value: CSV_COLUMNS[c.id] })));
     const name = `subnets-${formatIPv4(root.addr)}-${root.bits}.csv`;
-    download(name, csv);
+    download(name, csv, 'text/csv');
     const n = countLeaves(root);
     ui.setFeedback('success', `Exported ${n} ${n === 1 ? 'subnet' : 'subnets'} to ${name}.`);
   },
@@ -131,8 +137,8 @@ async function copyText(text) {
   }
 }
 
-function download(name, text) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+function download(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
   const a = document.createElement('a');
   a.href = url;
   a.download = name;

@@ -103,6 +103,14 @@ tr:focus-visible, li:focus-visible { box-shadow: none; outline-offset: -3px; }
 }
 .help-dialog::backdrop { background: color-mix(in srgb, var(--bg) 75%, transparent); }
 
+/* ---- Size bar: how much of the whole network a subnet covers (decorative; the mask already says it in text) ---- */
+.size-cell { position: relative; }
+.size-cell::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--border); }
+.size-cell > .size-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: max(3px, calc(100% * var(--share))); background: var(--accent); }
+.size-track { position: relative; height: 3px; border-radius: 2px; background: var(--border); overflow: hidden; }
+/* 100% is the card's content box; add its padding and indent to get the full list width. */
+.size-track > .size-bar { position: absolute; left: 0; top: 0; bottom: 0; width: max(3px, min(100%, calc((100% + 1.25rem + var(--indent, 0rem)) * var(--share)))); background: var(--accent); }
+
 /* ---- Cards (narrow screens) ---- */
 .card-title { overflow-wrap: anywhere; }
 
@@ -111,6 +119,8 @@ tr:focus-visible, li:focus-visible { box-shadow: none; outline-offset: -3px; }
   .btn, .bracket, .field, .card { border: 1px solid ButtonText; }
   .bracket { border-left-width: 3px; }
   .tooltip { border: 1px solid CanvasText; }
+  .size-bar { background: Highlight; forced-color-adjust: none; }
+  .size-cell::before, .size-track { background: GrayText; forced-color-adjust: none; }
   :focus-visible { outline: 3px solid Highlight; }
 }
 
