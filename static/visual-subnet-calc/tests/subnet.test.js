@@ -194,7 +194,7 @@ test('toCsv quotes values and uses CRLF', () => {
   assert.equal(csv, '"Subnet address","Hosts, usable"\r\n"192.168.0.0/25","126"\r\n"192.168.0.128/25","126"\r\n');
 });
 
-test('toJson lists every field for every subnet, including /31 and /32', () => {
+test('toJson with all columns lists every field for every subnet, including /31 and /32', () => {
   const root = createRoot(parseIPv4('10.0.0.0'), 30);
   divide(root);
   divide(root.children[1]);
@@ -203,12 +203,28 @@ test('toJson lists every field for every subnet, including /31 and /32', () => {
   assert.equal(out.subnetCount, 3);
   assert.equal(out.totalUsableHosts, 2 + 1 + 1);
   assert.deepEqual(out.subnets[0], {
-    cidr: '10.0.0.0/31', address: '10.0.0.0', prefixLength: 31, netmask: '255.255.255.254',
+    cidr: '10.0.0.0/31', netmask: '255.255.255.254',
     firstAddress: '10.0.0.0', lastAddress: '10.0.0.1', firstUsable: '10.0.0.0', lastUsable: '10.0.0.1', usableHosts: 2,
   });
   assert.equal(out.subnets[2].cidr, '10.0.0.3/32');
   assert.equal(out.subnets[2].firstUsable, '10.0.0.3');
   assert.equal(out.subnets[2].usableHosts, 1);
+});
+
+test('toJson only includes the selected columns', () => {
+  const root = createRoot(parseIPv4('192.168.0.0'), 24);
+  divide(root);
+  const some = JSON.parse(toJson(root, ['subnet', 'range']));
+  assert.deepEqual(Object.keys(some), ['network', 'subnetCount', 'subnets']);
+  assert.deepEqual(some.subnets[0], { cidr: '192.168.0.0/25', firstAddress: '192.168.0.0', lastAddress: '192.168.0.127' });
+
+  const hostsOnly = JSON.parse(toJson(root, ['hosts']));
+  assert.equal(hostsOnly.totalUsableHosts, 252);
+  assert.deepEqual(hostsOnly.subnets, [{ usableHosts: 126 }, { usableHosts: 126 }]);
+
+  const mask = JSON.parse(toJson(root, ['netmask']));
+  assert.ok(!('totalUsableHosts' in mask));
+  assert.deepEqual(mask.subnets[1], { netmask: '255.255.255.128' });
 });
 
 test('sizeShare is the fraction of the network a subnet covers', () => {

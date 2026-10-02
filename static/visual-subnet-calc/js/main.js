@@ -53,20 +53,25 @@ const ui = createUI({
   },
   onExportJson() {
     const name = `subnets-${formatIPv4(root.addr)}-${root.bits}.json`;
-    download(name, toJson(root), 'application/json');
+    download(name, toJson(root, exportColumns().map((c) => c.id)), 'application/json');
     const n = countLeaves(root);
     ui.setFeedback('success', `Exported ${n} ${n === 1 ? 'subnet' : 'subnets'} to ${name}.`);
   },
   onExport() {
-    const visible = COLUMNS.filter((c) => c.id in CSV_COLUMNS && cols[c.id]);
-    const chosen = visible.length ? visible : COLUMNS.filter((c) => c.id in CSV_COLUMNS);
-    const csv = toCsv(root, chosen.map((c) => ({ label: c.label, value: CSV_COLUMNS[c.id] })));
+    const csv = toCsv(root, exportColumns().map((c) => ({ label: c.label, value: CSV_COLUMNS[c.id] })));
     const name = `subnets-${formatIPv4(root.addr)}-${root.bits}.csv`;
     download(name, csv, 'text/csv');
     const n = countLeaves(root);
     ui.setFeedback('success', `Exported ${n} ${n === 1 ? 'subnet' : 'subnets'} to ${name}.`);
   },
 });
+
+/** The data columns that are switched on (all five if none are), used by both CSV and JSON export. */
+function exportColumns() {
+  const all = COLUMNS.filter((c) => c.id in CSV_COLUMNS);
+  const visible = all.filter((c) => cols[c.id]);
+  return visible.length ? visible : all;
+}
 
 function update({ address, mask }) {
   const res = validateInput(address, mask);

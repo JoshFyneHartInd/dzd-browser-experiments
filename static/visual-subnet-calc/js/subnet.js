@@ -220,27 +220,31 @@ export function toCsv(root, columns) {
   return lines.join('\r\n') + '\r\n';
 }
 
-/** Machine-readable export: every field for every subnet, in address order. */
-export function toJson(root) {
+/** Which JSON fields each data column contributes. */
+const JSON_FIELDS = {
+  subnet: (i) => ({ cidr: i.cidr }),
+  netmask: (i) => ({ netmask: i.netmask }),
+  range: (i) => ({ firstAddress: i.firstText, lastAddress: i.lastText }),
+  usable: (i) => ({ firstUsable: i.usableFirstText, lastUsable: i.usableLastText }),
+  hosts: (i) => ({ usableHosts: i.hosts }),
+};
+export const JSON_COLUMN_IDS = Object.keys(JSON_FIELDS);
+
+/**
+ * Machine-readable export, in address order. `columnIds` picks which columns appear
+ * (default: all five). `network` and `subnetCount` are always there;
+ * `totalUsableHosts` is only there when the hosts column is.
+ */
+export function toJson(root, columnIds = JSON_COLUMN_IDS) {
+  const ids = columnIds.filter((id) => id in JSON_FIELDS);
   const subnets = leaves(root).map((leaf) => {
-    const i = subnetInfo(leaf.addr, leaf.bits);
-    return {
-      cidr: i.cidr,
-      address: i.address,
-      prefixLength: i.bits,
-      netmask: i.netmask,
-      firstAddress: i.firstText,
-      lastAddress: i.lastText,
-      firstUsable: i.usableFirstText,
-      lastUsable: i.usableLastText,
-      usableHosts: i.hosts,
-    };
+    const info = subnetInfo(leaf.addr, leaf.bits);
+    return Object.assign({}, ...ids.map((id) => JSON_FIELDS[id](info)));
   });
-  return JSON.stringify(
-    { network: nodeCidr(root), subnetCount: subnets.length, totalUsableHosts: totalHosts(root), subnets },
-    null,
-    2,
-  ) + '\n';
+  const out = { network: nodeCidr(root), subnetCount: subnets.length };
+  if (ids.includes('hosts')) out.totalUsableHosts = totalHosts(root);
+  out.subnets = subnets;
+  return JSON.stringify(out, null, 2) + '\n';
 }
 
 /** Fraction of the whole network a node covers: 1 for the root, 0.5 for a half, and so on. */
