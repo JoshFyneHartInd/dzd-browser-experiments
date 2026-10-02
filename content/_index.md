@@ -14,6 +14,11 @@ url = '/lockprot/'
 description = 'Crack the code before you get locked out'
 
 [[links]]
+title = 'Bleepr'
+url = '/bleepr/'
+description = 'Compose retro ringtones'
+
+[[links]]
 title = 'Nodepad'
 url = '/nodepad/'
 description = 'A JSON/YAML Explorer'
