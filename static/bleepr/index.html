@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bleepr</title>
+  <meta name="description" content="Write retro cell-phone ringtones on a piano roll, share them as RTTTL, export WAV.">
+  <!-- Theme registry first: sets data-theme and the dark class before paint -->
+  <script src="js/themes.js"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      corePlugins: { preflight: true },
+      theme: {
+        extend: {
+          colors: {
+            bg: 'var(--bg)',
+            surface: 'var(--surface)',
+            'surface-2': 'var(--surface-2)',
+            border: 'var(--border)',
+            fg: 'var(--fg)',
+            'fg-muted': 'var(--fg-muted)',
+            accent: 'var(--accent)',
+            'accent-fg': 'var(--accent-fg)',
+            note: 'var(--note)',
+            'note-selected': 'var(--note-selected)',
+            danger: 'var(--danger)',
+            'layer-1': 'var(--layer-1)', 'layer-2': 'var(--layer-2)', 'layer-3': 'var(--layer-3)',
+            'layer-4': 'var(--layer-4)', 'layer-5': 'var(--layer-5)', 'layer-6': 'var(--layer-6)',
+          },
+          borderColor: { DEFAULT: 'var(--border)' },
+          fontFamily: {
+            ui: ['"Atkinson Hyperlegible"', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+            lcd: ['Doto', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Doto:wght@700;900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-bg text-fg font-ui">
+  <div id="app" class="app">
+
+    <!-- Header -->
+    <header class="app-header bg-surface border-b border-border">
+      <div class="hdr-row">
+        <h1 class="brand font-lcd text-fg" aria-label="Bleepr">Bleepr</h1>
+        <div class="name-field">
+          <label for="tune-name" class="sr-only">Tune name (up to 10 characters)</label>
+          <input id="tune-name" class="text-input bg-bg text-fg border border-border" maxlength="10" autocomplete="off" spellcheck="false">
+          <span id="dirty" class="dirty text-fg-muted" hidden><span aria-hidden="true">●</span><span class="sr-only">Unsaved changes</span></span>
+        </div>
+        <div class="hdr-actions">
+          <button type="button" id="btn-undo-m" class="btn icon-btn phone-only" aria-label="Undo" title="Undo" disabled>
+            <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+          </button>
+          <button type="button" id="btn-redo-m" class="btn icon-btn phone-only" aria-label="Redo" title="Redo" disabled>
+            <span class="material-symbols-outlined" aria-hidden="true">redo</span>
+          </button>
+          <button type="button" id="btn-tunes" class="btn icon-text desk-only" aria-label="My tunes" title="My tunes">
+            <span class="material-symbols-outlined" aria-hidden="true">folder_open</span><span class="label">My tunes</span>
+          </button>
+          <button type="button" id="btn-share" class="btn icon-text desk-only" aria-label="Share and import" title="Share and import">
+            <span class="material-symbols-outlined" aria-hidden="true">share</span><span class="label">Share</span>
+          </button>
+          <button type="button" id="btn-export" class="btn icon-text desk-only" aria-label="Export WAV" title="Export WAV">
+            <span class="material-symbols-outlined" aria-hidden="true">download</span><span class="label">Export</span>
+          </button>
+          <div id="theme-picker" class="tp"></div>
+          <div class="menu-wrap phone-only">
+            <button type="button" id="btn-menu" class="btn icon-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-panel" aria-label="Menu" title="Menu">
+              <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+            </button>
+            <div id="menu-backdrop" class="menu-backdrop" hidden></div>
+            <div id="menu-panel" class="menu-panel" role="menu" aria-label="Menu" hidden>
+              <button type="button" role="menuitem" class="menu-item" data-proxy="btn-tunes" tabindex="-1">
+                <span class="material-symbols-outlined" aria-hidden="true">folder_open</span>My tunes</button>
+              <button type="button" role="menuitem" class="menu-item" data-proxy="btn-share" tabindex="-1">
+                <span class="material-symbols-outlined" aria-hidden="true">share</span>Share and import</button>
+              <button type="button" role="menuitem" class="menu-item" data-proxy="btn-export" tabindex="-1">
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>Export WAV</button>
+              <button type="button" role="menuitemcheckbox" class="menu-item" id="menu-speaker" aria-checked="false" data-proxy="btn-speaker" tabindex="-1">
+                <span class="material-symbols-outlined" aria-hidden="true">speaker_phone</span>Phone speaker<span class="menu-check material-symbols-outlined" aria-hidden="true">check</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hdr-row settings">
+        <div class="lcd-group bg-surface-2 border border-border" role="group" aria-labelledby="bpm-label">
+          <label id="bpm-label" for="bpm" class="lcd-label text-fg-muted">BPM</label>
+          <button type="button" id="bpm-down" class="btn icon-btn small" aria-label="Slower" title="Slower">
+            <span class="material-symbols-outlined" aria-hidden="true">remove</span>
+          </button>
+          <input id="bpm" class="lcd font-lcd text-fg" type="number" inputmode="numeric" min="20" max="300" step="1">
+          <button type="button" id="bpm-up" class="btn icon-btn small" aria-label="Faster" title="Faster">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          </button>
+        </div>
+        <div class="lcd-group bg-surface-2 border border-border" role="group" aria-labelledby="meas-label">
+          <span id="meas-label" class="lcd-label text-fg-muted">Measures</span>
+          <button type="button" id="meas-down" class="btn icon-btn small" aria-label="Fewer measures" title="Fewer measures">
+            <span class="material-symbols-outlined" aria-hidden="true">remove</span>
+          </button>
+          <output id="measures" class="lcd font-lcd text-fg" aria-live="polite">4</output>
+          <button type="button" id="meas-up" class="btn icon-btn small" aria-label="More measures" title="More measures">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          </button>
+          <span id="loop-secs" class="loop-secs font-lcd text-fg-muted" title="Loop length">8.0 s</span>
+        </div>
+        <button type="button" id="btn-speaker" class="btn icon-text toggle desk-only" aria-pressed="false" aria-label="Phone speaker" title="Phone speaker effect">
+          <span class="material-symbols-outlined" aria-hidden="true">speaker_phone</span><span class="label">Phone speaker</span>
+        </button>
+        <span id="limit-msg" class="limit-msg text-fg-muted" role="status"></span>
+      </div>
+    </header>
+
+    <!-- Piano roll -->
+    <main class="roll-wrap bg-surface">
+      <canvas id="roll" tabindex="0" role="application" aria-roledescription="piano roll"
+        aria-label="Piano roll. Arrow keys move the cursor, Enter adds or removes a note, Delete removes."></canvas>
+    </main>
+
+    <!-- Layers (always directly under the roll) -->
+    <section id="layers" class="layers collapsed bg-bg border-t border-border" aria-labelledby="layers-h">
+      <div class="layers-head">
+        <h2 id="layers-h" class="section-h text-fg-muted">Layers <span id="layer-count" class="font-normal"></span></h2>
+        <button type="button" id="layers-toggle" class="btn icon-text phone-only layers-toggle" aria-expanded="false" aria-controls="layer-list">
+          <span class="material-symbols-outlined" aria-hidden="true">expand_more</span><span class="toggle-text">Show all</span>
+        </button>
+        <button type="button" id="btn-add-layer" class="btn icon-text" aria-label="Add layer" title="Add layer">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span><span class="label">Add layer</span>
+        </button>
+      </div>
+      <ul id="layer-list" class="layer-list"></ul>
+    </section>
+
+    <!-- Toolbar -->
+    <nav class="toolbar bg-surface border-t border-border" aria-label="Playback and editing">
+      <div class="tb-group">
+        <button type="button" id="btn-play" class="btn icon-btn primary" aria-label="Play" title="Play (Space)">
+          <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+        </button>
+        <button type="button" id="btn-loop" class="btn icon-btn toggle" aria-pressed="true" aria-label="Loop" title="Loop">
+          <span class="material-symbols-outlined" aria-hidden="true">repeat</span>
+        </button>
+      </div>
+      <div class="tb-group" role="group" aria-label="Tool">
+        <button type="button" class="btn icon-btn toggle" data-tool="draw" aria-pressed="true" aria-label="Draw" title="Draw: tap to add, drag the end to resize, tap a note to remove">
+          <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+        </button>
+        <button type="button" class="btn icon-btn toggle" data-tool="select" aria-pressed="false" aria-label="Select" title="Select: tap or drag a box to select, drag to move">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_selector_tool</span>
+        </button>
+        <button type="button" class="btn icon-btn toggle" data-tool="erase" aria-pressed="false" aria-label="Erase" title="Erase: tap or drag over notes">
+          <span class="material-symbols-outlined" aria-hidden="true">ink_eraser</span>
+        </button>
+      </div>
+      <div class="tb-group">
+        <label for="snap" class="tb-label text-fg-muted">Snap</label>
+        <select id="snap" class="select bg-bg text-fg border border-border">
+          <option value="8">1/4</option>
+          <option value="4">1/8</option>
+          <option value="2" selected>1/16</option>
+          <option value="1">1/32</option>
+        </select>
+      </div>
+      <div class="tb-group">
+        <button type="button" id="btn-delete" class="btn icon-btn" aria-label="Delete selected notes" title="Delete selected notes (Delete)" disabled>
+          <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+        </button>
+        <button type="button" id="btn-undo" class="btn icon-btn desk-only" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)" disabled>
+          <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+        </button>
+        <button type="button" id="btn-redo" class="btn icon-btn desk-only" aria-label="Redo" title="Redo (Shift+Ctrl/Cmd+Z)" disabled>
+          <span class="material-symbols-outlined" aria-hidden="true">redo</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Chip picker / layer sound -->
+  <dialog id="dlg-chip" class="sheet bg-surface text-fg" aria-labelledby="chip-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head border-b border-border">
+        <h2 id="chip-title" class="sheet-title">Add layer</h2>
+        <button value="close" class="btn icon-btn" aria-label="Close" title="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+      </header>
+      <div class="sheet-body">
+        <div id="chip-name-row" class="field">
+          <label for="chip-layer-name" class="field-label text-fg-muted">Layer name</label>
+          <input id="chip-layer-name" class="text-input bg-bg text-fg border border-border" maxlength="10" autocomplete="off">
+        </div>
+        <fieldset class="chip-list">
+          <legend class="field-label text-fg-muted">Chip</legend>
+          <div id="chip-options"></div>
+        </fieldset>
+        <div class="sliders">
+          <div class="field">
+            <label for="chip-grit" class="field-label text-fg-muted">Grit <output id="chip-grit-out" class="text-fg"></output></label>
+            <input id="chip-grit" type="range" min="0" max="100" step="1" class="range">
+          </div>
+          <div class="field">
+            <label for="chip-bright" class="field-label text-fg-muted">Brightness <output id="chip-bright-out" class="text-fg"></output></label>
+            <input id="chip-bright" type="range" min="0" max="100" step="1" class="range">
+          </div>
+        </div>
+      </div>
+      <footer class="sheet-foot border-t border-border">
+        <button value="close" id="chip-cancel" class="btn text-btn">Cancel</button>
+        <button value="ok" id="chip-ok" class="btn text-btn primary">Add layer</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Share and import -->
+  <dialog id="dlg-share" class="sheet bg-surface text-fg" aria-labelledby="share-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head border-b border-border">
+        <h2 id="share-title" class="sheet-title">Share and import</h2>
+        <button value="close" class="btn icon-btn" aria-label="Close" title="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+      </header>
+      <div class="sheet-body">
+        <h3 class="section-h text-fg-muted">Share</h3>
+        <div class="share-actions">
+          <button type="button" id="copy-rtttl" class="btn share-btn border border-border">
+            <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+            <span class="share-text"><span class="share-name">Copy RTTTL</span><span class="share-desc text-fg-muted" id="copy-rtttl-desc">Active layer only. Works in most ringtone tools.</span></span>
+          </button>
+          <button type="button" id="copy-full" class="btn share-btn border border-border">
+            <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+            <span class="share-text"><span class="share-name">Copy full tune</span><span class="share-desc text-fg-muted">All layers and chips, as text you can paste back into Bleepr.</span></span>
+          </button>
+          <button type="button" id="copy-link" class="btn share-btn border border-border">
+            <span class="material-symbols-outlined" aria-hidden="true">link</span>
+            <span class="share-text"><span class="share-name">Copy link</span><span class="share-desc text-fg-muted">A link that opens this tune.</span></span>
+          </button>
+        </div>
+        <label for="share-out" class="sr-only">Copied text</label>
+        <textarea id="share-out" class="code-box bg-bg text-fg border border-border font-mono" rows="3" readonly hidden></textarea>
+
+        <h3 class="section-h text-fg-muted">Import</h3>
+        <label for="import-text" class="field-label text-fg-muted">Paste RTTTL or a full tune</label>
+        <textarea id="import-text" class="code-box bg-bg text-fg border border-border font-mono" rows="4" spellcheck="false"
+          placeholder="name:d=4,o=5,b=120:8c,8d,8e,4p"></textarea>
+        <div id="import-result" class="import-result" aria-live="polite"></div>
+      </div>
+      <footer class="sheet-foot border-t border-border">
+        <button type="button" id="import-add" class="btn text-btn" disabled>Add as new layer</button>
+        <button type="button" id="import-replace" class="btn text-btn primary" disabled>Replace project</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Export -->
+  <dialog id="dlg-export" class="sheet bg-surface text-fg" aria-labelledby="export-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head border-b border-border">
+        <h2 id="export-title" class="sheet-title">Export WAV</h2>
+        <button value="close" class="btn icon-btn" aria-label="Close" title="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+      </header>
+      <div class="sheet-body">
+        <p class="text-fg-muted" id="export-summary"></p>
+        <div class="field">
+          <span class="field-label text-fg-muted" id="rep-label">Repeats</span>
+          <div class="stepper" role="group" aria-labelledby="rep-label">
+            <button type="button" id="rep-down" class="btn icon-btn" aria-label="Fewer repeats" title="Fewer repeats"><span class="material-symbols-outlined" aria-hidden="true">remove</span></button>
+            <output id="rep-val" class="lcd font-lcd text-fg" aria-live="polite">1</output>
+            <button type="button" id="rep-up" class="btn icon-btn" aria-label="More repeats" title="More repeats"><span class="material-symbols-outlined" aria-hidden="true">add</span></button>
+            <span id="rep-total" class="text-fg-muted"></span>
+          </div>
+        </div>
+        <div class="field fade-row">
+          <label class="check"><input type="checkbox" id="fade-on"> Fade out at end</label>
+          <label for="fade-len" class="sr-only">Fade length</label>
+          <select id="fade-len" class="select bg-bg text-fg border border-border" disabled>
+            <option value="0.5">0.5 s</option>
+            <option value="1" selected>1 s</option>
+            <option value="2">2 s</option>
+          </select>
+        </div>
+        <p id="fade-warn" class="warn text-danger" hidden>
+          <span class="material-symbols-outlined" aria-hidden="true">warning</span> A faded file won't loop seamlessly.
+        </p>
+        <p id="export-speaker" class="text-fg-muted" hidden>The Phone speaker effect is included.</p>
+        <p id="export-status" class="text-fg-muted" role="status"></p>
+      </div>
+      <footer class="sheet-foot border-t border-border">
+        <button value="close" class="btn text-btn">Cancel</button>
+        <button type="button" id="export-go" class="btn icon-text text-btn primary">
+          <span class="material-symbols-outlined" aria-hidden="true">download</span><span>Export</span>
+        </button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- My tunes -->
+  <dialog id="dlg-tunes" class="sheet bg-surface text-fg" aria-labelledby="tunes-title">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head border-b border-border">
+        <h2 id="tunes-title" class="sheet-title">My tunes</h2>
+        <button value="close" class="btn icon-btn" aria-label="Close" title="Close"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+      </header>
+      <div class="sheet-body">
+        <div class="current-tune bg-surface-2 border border-border">
+          <div class="current-text">
+            <span class="current-name font-lcd" id="tunes-current"></span>
+            <span class="text-fg-muted" id="tunes-current-state"></span>
+          </div>
+          <button type="button" id="tunes-save" class="btn icon-text text-btn primary"><span class="material-symbols-outlined" aria-hidden="true">save</span><span>Save</span></button>
+          <button type="button" id="tunes-new" class="btn icon-text text-btn"><span class="material-symbols-outlined" aria-hidden="true">add</span><span>New</span></button>
+        </div>
+        <h3 class="section-h text-fg-muted">Saved</h3>
+        <ul id="tunes-list" class="tune-list"></ul>
+        <h3 class="section-h text-fg-muted">Examples</h3>
+        <ul id="examples-list" class="tune-list"></ul>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Confirm -->
+  <dialog id="dlg-confirm" class="sheet small bg-surface text-fg" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
+    <form method="dialog" class="sheet-inner">
+      <header class="sheet-head">
+        <h2 id="confirm-title" class="sheet-title"></h2>
+      </header>
+      <div class="sheet-body"><p id="confirm-msg"></p></div>
+      <footer class="sheet-foot" id="confirm-actions"></footer>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast bg-fg text-bg" role="status" aria-live="polite" hidden>
+    <span id="toast-msg"></span>
+    <button type="button" id="toast-action" class="toast-action" hidden></button>
+  </div>
+  <div id="live" class="sr-only" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
