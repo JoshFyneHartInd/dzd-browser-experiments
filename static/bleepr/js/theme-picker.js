@@ -68,7 +68,15 @@ export function mountThemePicker(container) {
   let active = null;
   let typeBuf = '';
   let typeTimer = 0;
-  const focusTarget = () => search || list;
+  // On touch screens, don't focus the search box on open (it would raise the keyboard).
+  const coarse = matchMedia('(pointer: coarse)');
+  const focusTarget = () => (search && !coarse.matches ? search : list);
+  const setDescendant = (id) => {
+    for (const el of [list, search]) {
+      if (!el) continue;
+      if (id) el.setAttribute('aria-activedescendant', id); else el.removeAttribute('aria-activedescendant');
+    }
+  };
 
   function labelFor(id) {
     if (id === T().SYSTEM) return 'System';
@@ -90,9 +98,9 @@ export function mountThemePicker(container) {
   function setActive(o, { preview = true, scroll = true } = {}) {
     if (active) active.classList.remove('is-active');
     active = o;
-    if (!o) { focusTarget().removeAttribute('aria-activedescendant'); return; }
+    if (!o) { setDescendant(null); return; }
     o.classList.add('is-active');
-    focusTarget().setAttribute('aria-activedescendant', o.id);
+    setDescendant(o.id);
     if (scroll) o.scrollIntoView({ block: 'nearest' });
     if (preview) T().preview(o.dataset.id);
   }
@@ -201,4 +209,79 @@ export function mountThemePicker(container) {
 
   syncButton();
   return { open, close };
+}
+
+// Inline theme list (used on the first welcome card). Choosing an option
+// applies and saves it straight away; arrow keys move and choose.
+export function mountThemeList(container, { label = 'Theme', prefix = 'tl' } = {}) {
+  const themes = T().list;
+  const groups = [];
+  for (const t of themes) {
+    let g = groups.find((x) => x.name === t.group);
+    if (!g) groups.push((g = { name: t.group, items: [] }));
+    g.items.push(t);
+  }
+  const opt = (id, name) => `
+    <div class="tp-opt" role="option" id="${prefix}-opt-${id}" data-id="${id}" aria-selected="false">
+      <span class="tp-strip" aria-hidden="true">${swatchStrip(T().vars(id))}</span>
+      <span class="tp-opt-name">${name}</span>
+      <span class="tp-check">${icon('check')}</span>
+    </div>`;
+  container.innerHTML = `
+    <div class="tp-list theme-inline" role="listbox" tabindex="0" aria-label="${label}">
+      ${opt(T().SYSTEM, 'System (auto)')}
+      ${groups.map((g, gi) => `
+        <div role="group" aria-labelledby="${prefix}-g-${gi}">
+          <div class="tp-group" id="${prefix}-g-${gi}" role="presentation">${g.name}</div>
+          ${g.items.map((t) => opt(t.id, t.name)).join('')}
+        </div>`).join('')}
+    </div>`;
+  const list = container.querySelector('[role="listbox"]');
+  const opts = [...list.querySelectorAll('[role="option"]')];
+
+  // Scroll inside the list only (scrollIntoView could also move the carousel).
+  function reveal(o, center = false) {
+    const top = o.offsetTop, bottom = top + o.offsetHeight, head = 30;
+    if (center) list.scrollTop = top - list.clientHeight / 2 + o.offsetHeight / 2;
+    else if (top - head < list.scrollTop) list.scrollTop = top - head;
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }
+
+  function sync(center = false) {
+    const choice = T().choice();
+    let cur = null;
+    for (const o of opts) {
+      const on = o.dataset.id === choice;
+      o.setAttribute('aria-selected', String(on));
+      o.classList.toggle('is-active', on);
+      if (on) cur = o;
+    }
+    // System swatches follow the OS
+    opts[0].querySelector('.tp-strip').innerHTML = swatchStrip(T().vars(T().SYSTEM));
+    if (cur) { list.setAttribute('aria-activedescendant', cur.id); if (center) reveal(cur, true); }
+  }
+
+  function choose(o) {
+    if (!o) return;
+    T().set(o.dataset.id);
+    sync();
+    reveal(o);
+  }
+
+  list.addEventListener('click', (e) => choose(e.target.closest('[role="option"]')));
+  list.addEventListener('keydown', (e) => {
+    const i = opts.findIndex((o) => o.getAttribute('aria-selected') === 'true');
+    let next = null;
+    if (e.key === 'ArrowDown') next = opts[Math.min(opts.length - 1, i + 1)];
+    else if (e.key === 'ArrowUp') next = opts[Math.max(0, i - 1)];
+    else if (e.key === 'Home') next = opts[0];
+    else if (e.key === 'End') next = opts.at(-1);
+    if (!next) return;
+    e.preventDefault();
+    e.stopPropagation();
+    choose(next);
+  });
+  document.addEventListener('themechange', () => sync());
+  sync();
+  return { refresh: () => sync(true) };
 }

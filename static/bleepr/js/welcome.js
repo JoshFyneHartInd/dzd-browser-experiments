@@ -1,6 +1,8 @@
 // Welcome tour: a short swipeable set of cards. Opens on first launch and
 // from the Help button. Uses native horizontal scroll-snap for swiping.
 
+import { mountThemeList } from './theme-picker.js';
+
 const SEEN_KEY = 'bleepr.welcome.v1';
 const icon = (name) => `<span class="material-symbols-outlined" aria-hidden="true">${name}</span>`;
 
@@ -81,6 +83,7 @@ function cards(touch) {
         ['play_arrow', 'A demo tune is loaded. Press Play to hear it.'],
         ['swipe', touch ? 'Swipe for a quick tour.' : 'Use the arrow keys or Next for a quick tour.'],
       ],
+      themes: true,
     },
     {
       id: 'draw',
@@ -147,6 +150,12 @@ export function mountWelcome() {
             <ul class="welcome-tips">
               ${c.tips.map(([ic, text]) => `<li>${icon(ic)}<span>${text}</span></li>`).join('')}
             </ul>
+            ${c.themes ? `
+              <div class="welcome-theme">
+                <h3 class="welcome-theme-h" id="welcome-theme-h">Pick a theme</h3>
+                <p class="welcome-theme-note">Optional. Change it any time with the theme button at the top.</p>
+                <div id="welcome-theme-list"></div>
+              </div>` : ''}
           </section>`).join('')}
       </div>
       <footer class="welcome-foot">
@@ -159,6 +168,8 @@ export function mountWelcome() {
       <div class="sr-only" aria-live="polite" id="welcome-live"></div>
     </div>`;
   document.body.appendChild(dlg);
+
+  const themeList = mountThemeList(dlg.querySelector('#welcome-theme-list'), { label: 'Pick a theme', prefix: 'wt' });
 
   const track = dlg.querySelector('#welcome-track');
   const slides = [...dlg.querySelectorAll('.welcome-slide')];
@@ -222,6 +233,8 @@ export function mountWelcome() {
     dlg.showModal();
     track.scrollLeft = 0;
     setCurrent(0, false);
+    for (const sl of slides) sl.scrollTop = 0;
+    themeList.refresh();
     next.focus();
   }
 
