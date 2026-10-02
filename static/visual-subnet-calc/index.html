@@ -53,10 +53,13 @@
     <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
       <h1 class="text-xl font-semibold">Visual Subnet Calculator</h1>
       <div class="flex items-center gap-2">
-        <label for="theme-select" class="inline-flex items-center gap-1.5 text-sm text-fg-muted">
-          <span class="icon" aria-hidden="true">palette</span>Theme
-        </label>
-        <select id="theme-select" class="tap rounded-md border border-fg-muted bg-surface px-2 text-fg"></select>
+        <!-- On narrow screens this collapses to a palette icon button; the select sits invisibly on top of it and still opens the native picker. -->
+        <div class="theme-picker flex items-center gap-2">
+          <label for="theme-select" class="theme-label inline-flex items-center gap-1.5 text-sm text-fg-muted">
+            <span class="icon" aria-hidden="true">palette</span><span class="label-text">Theme</span>
+          </label>
+          <select id="theme-select" class="theme-select tap rounded-md border border-fg-muted bg-surface px-2 text-fg"></select>
+        </div>
         <button type="button" id="help-button" class="btn btn-icon" aria-label="How to use" aria-haspopup="dialog" data-tip="How to use">
           <span class="icon" aria-hidden="true">help</span>
         </button>
@@ -69,6 +72,8 @@
       <p class="rounded-md border border-border bg-surface p-3">This calculator needs JavaScript. Please turn it on and reload the page.</p>
     </noscript>
 
+    <!-- Side by side on desktop (lg and up), stacked below that. -->
+    <div class="grid gap-3 lg:grid-cols-2 lg:items-start">
     <section class="space-y-3">
       <details id="network-details" class="disclosure group rounded-lg border border-border bg-surface" open>
         <summary class="flex tap cursor-pointer items-center justify-between gap-2 px-4 py-2 font-medium">
@@ -79,7 +84,7 @@
           <span class="icon group-open:rotate-180" aria-hidden="true">expand_more</span>
         </summary>
         <div class="border-t border-border p-3">
-          <form id="network-form" novalidate aria-label="Network" class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-start lg:grid-cols-[minmax(0,24rem)_9rem_auto] lg:justify-start">
+          <form id="network-form" novalidate aria-label="Network" class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-start lg:grid-cols-[minmax(0,1fr)_8rem] 2xl:grid-cols-[minmax(0,1fr)_8rem_auto]">
             <div>
               <label for="address" class="mb-1 block text-sm font-medium">Network address</label>
               <input id="address" name="address" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"
@@ -95,7 +100,7 @@
                 class="field w-full tap rounded-md border border-fg-muted bg-surface px-3 font-mono text-fg">
               <p id="mask-error" class="msg mt-1" hidden></p>
             </div>
-            <div class="flex gap-2 sm:pt-6">
+            <div class="flex gap-2 sm:pt-6 lg:col-span-2 lg:pt-0 2xl:col-span-1 2xl:pt-6">
               <button type="submit" class="btn btn-primary">Update</button>
               <button type="button" id="reset" class="btn"><span class="icon" aria-hidden="true">restart_alt</span>Reset</button>
             </div>
@@ -117,6 +122,7 @@
         </fieldset>
       </div>
     </details>
+    </div>
 
     <section aria-labelledby="results-heading" class="space-y-3">
       <h2 id="results-heading" class="sr-only">Subnets</h2>

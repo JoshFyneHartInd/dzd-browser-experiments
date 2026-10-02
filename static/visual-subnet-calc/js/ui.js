@@ -142,7 +142,7 @@ export function createUI(h) {
     const root = rows.length ? `Subnets of ${nodeCidr(model.root)}` : 'Subnets';
     let h = '<div class="overflow-x-auto rounded-lg border border-border bg-surface"><table class="w-full border-separate border-spacing-0 text-left text-sm">';
     h += `<caption class="sr-only">${root}</caption><thead><tr class="bg-surface-2">`;
-    for (const id of dataCols) h += `<th scope="col" class="px-2 py-1.5 font-semibold whitespace-nowrap">${LABELS[id]}</th>`;
+    for (const id of dataCols) h += `<th scope="col" data-datacol class="px-2 py-1.5 font-semibold whitespace-nowrap">${LABELS[id]}</th>`;
     if (cols.divide) h += `<th scope="col" class="px-2 py-1.5 font-semibold">${LABELS.divide}</th>`;
     if (showJoin) h += `<th scope="col" colspan="${maxDepth}" class="px-2 py-1.5 font-semibold">${LABELS.join}</th>`;
     h += '</tr></thead><tbody>';
@@ -151,14 +151,17 @@ export function createUI(h) {
       const cidr = info.cidr;
       const share = sizeShare(row.node, model.root);
       h += `<tr data-row="${cidr}" tabindex="-1" class="bg-surface hover:bg-surface-2">`;
-      for (const id of dataCols) {
+      dataCols.forEach((id, n) => {
         const note = noteIn === id ? noteHtml(info, cols) : '';
+        const isFirst = n === 0;
+        const first = isFirst ? 'size-cell pb-1 ' : '';
+        const bar = isFirst ? `<span class="size-bar" aria-hidden="true" style="--share:${share}"></span>` : '';
         if (id === 'subnet') {
-          h += `<th scope="row" class="size-cell border-t border-border px-2 py-0.5 pb-1 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-2">${copyButton(cidr)}<span class="font-mono">${cidr}</span></span><span class="size-bar" aria-hidden="true" style="--share:${share}"></span></th>`;
+          h += `<th scope="row" class="${first}border-t border-border px-2 py-0.5 text-left font-medium whitespace-nowrap"><span class="inline-flex items-center gap-2">${copyButton(cidr)}<span class="font-mono">${cidr}</span></span>${bar}</th>`;
         } else {
-          h += `<td class="border-t border-border px-2 py-0.5 ${id === 'hosts' ? 'text-right ' : ''}font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}</td>`;
+          h += `<td class="${first}border-t border-border px-2 py-0.5 ${id === 'hosts' ? 'text-right ' : ''}font-mono tabular-nums ${id === 'usable' || id === 'range' ? 'whitespace-nowrap' : ''}">${value(id, info)}${note}${bar}</td>`;
         }
-      }
+      });
       if (cols.divide) h += `<td class="border-t border-border px-2 py-0.5">${divideButton(cidr, row.node)}</td>`;
       if (showJoin) {
         if (row.depth < maxDepth) h += `<td colspan="${maxDepth - row.depth}" class="border-t border-border"></td>`;
@@ -223,6 +226,25 @@ export function createUI(h) {
     const count = rows.length;
     els.summary.textContent = `${nf.format(count)} ${count === 1 ? 'subnet' : 'subnets'}, ${nf.format(totalHosts(model.root))} usable ${totalHosts(model.root) === 1 ? 'host' : 'hosts'} in total`;
     els.results.innerHTML = wide.matches ? tableHtml(rows, maxDepth, model.cols) : cardsHtml(rows, model.cols);
+    watchBarSpan();
+  }
+
+  // The size bar runs from the left edge of the first data column to the right edge of the last one
+  // (the Split column starts right after). CSS can't know that distance, so measure it.
+  let spanObserver = null;
+  function measureBarSpan() {
+    const table = els.results.querySelector('table');
+    const heads = table ? table.querySelectorAll('th[data-datacol]') : [];
+    if (heads.length === 0) return;
+    const span = heads[heads.length - 1].getBoundingClientRect().right - heads[0].getBoundingClientRect().left;
+    if (span > 0) table.style.setProperty('--bar-span', `${span}px`);
+  }
+  function watchBarSpan() {
+    if (spanObserver) spanObserver.disconnect();
+    measureBarSpan();
+    if (typeof ResizeObserver !== 'function') return;
+    spanObserver = new ResizeObserver(measureBarSpan);
+    els.results.querySelectorAll('th[data-datacol]').forEach((th) => spanObserver.observe(th));
   }
 
   /** Put keyboard focus on a sensible control in the row with this CIDR. */
