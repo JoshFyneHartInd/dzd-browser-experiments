@@ -230,6 +230,18 @@ await back();
   await back();
 }
 
+// ---- Depth chart: deeper (bigger) numbers sit at the bottom ----
+{
+  await page.locator('.tile[data-sys="ballast"]').click(); await page.waitForSelector('.detail .detail-grid'); await page.waitForTimeout(400);
+  const ticks = await page.evaluate(() => [...document.querySelectorAll('.detail .chart')[0].querySelectorAll('text.chart-axis')]
+    .map((t) => ({ v: parseFloat(t.textContent.replace(/,/g, '')), y: +t.getAttribute('y') })).filter((t) => isFinite(t.v) && t.y < 130));
+  const top = ticks.reduce((a, b) => (a.y < b.y ? a : b)), bot = ticks.reduce((a, b) => (a.y > b.y ? a : b));
+  expect('Depth chart puts the larger number at the bottom', bot.v > top.v, JSON.stringify(ticks));
+  const other = await page.evaluate(() => { const t = [...document.querySelectorAll('.detail .chart')[1].querySelectorAll('text.chart-axis')].map((e) => ({ v: parseFloat(e.textContent), y: +e.getAttribute('y') })).filter((e) => isFinite(e.v) && e.y < 130); return other_ok(t); function other_ok(t) { const a = t.reduce((p, c) => (p.y < c.y ? p : c)), b = t.reduce((p, c) => (p.y > c.y ? p : c)); return b.v < a.v; } });
+  expect('Other charts still put the larger number on top', other);
+  await back();
+}
+
 await browser.close();
 if (errors.length) { console.log(`${errors.length} FAILURE(S):`); errors.forEach((e) => console.log('  x ' + e)); process.exit(1); }
 console.log(`UI smoke test: opened ${ids.length} detail views with no errors.`);

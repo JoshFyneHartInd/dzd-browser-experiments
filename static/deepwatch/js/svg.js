@@ -53,13 +53,13 @@ function scaleFor(values, ch, pad = 0.12) {
   const p = (hi - lo) * pad;
   return { lo: lo - p, hi: hi + p };
 }
-function linePath(values, W, H, lo, hi, x0 = 0, yOff = 0) {
+function linePath(values, W, H, lo, hi, x0 = 0, yOff = 0, flip = false) {
   const n = values.length;
   if (n < 2) return '';
   let d = '', pen = false;
   values.forEach((v, i) => {
     if (v == null) { pen = false; return; }
-    const x = x0 + (i / (n - 1)) * (W - x0), y = yOff + H - ((v - lo) / (hi - lo)) * H;
+    const x = x0 + (i / (n - 1)) * (W - x0), f = (v - lo) / (hi - lo), y = yOff + (flip ? f : 1 - f) * H;
     d += `${pen ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
     pen = true;
   });
@@ -68,7 +68,7 @@ function linePath(values, W, H, lo, hi, x0 = 0, yOff = 0) {
 
 export function sparkline(values, ch, W = 120, H = 32) {
   const { lo, hi } = scaleFor(values, ch);
-  const d = linePath(values, W, H - 4, lo, hi);
+  const d = linePath(values, W, H - 4, lo, hi, 0, 0, !!ch.flip);
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><g transform="translate(0 2)"><path d="${d}" fill="none" class="spark-line" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></g></svg>`;
 }
 
@@ -83,17 +83,18 @@ export function trendChart(values, ch, { W = 520, H = 150, label = '' } = {}) {
     const span = Math.max(okHi - okLo, (ch.max - ch.min) * 0.1);
     lo = Math.min(lo, okLo - span * 0.25); hi = Math.max(hi, okHi + span * 0.25);
   }
-  const y = (v) => 3 + plotH - ((v - lo) / (hi - lo)) * plotH;
+  // ch.flip: bigger numbers at the bottom (depth: deeper is down)
+  const y = (v) => { const f = (v - lo) / (hi - lo); return 3 + (ch.flip ? f : 1 - f) * plotH; };
   const bands = bandIntervals(ch).map((b) => {
     const a = Math.max(lo, b.a), c = Math.min(hi, b.b);
     if (c <= a) return '';
-    return `<rect x="${L}" y="${y(c).toFixed(1)}" width="${plotW}" height="${(y(a) - y(c)).toFixed(1)}" fill="url(#pat-${b.state})"/>`;
+    return `<rect x="${L}" y="${Math.min(y(a), y(c)).toFixed(1)}" width="${plotW}" height="${Math.abs(y(a) - y(c)).toFixed(1)}" fill="url(#pat-${b.state})"/>`;
   }).join('');
   const ticks = [lo + (hi - lo) * 0.1, (lo + hi) / 2, hi - (hi - lo) * 0.1].map((v) =>
     `<text x="${L - 6}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end" class="chart-axis">${fmtTick(v, ch)}</text><line x1="${L}" x2="${L + plotW}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="chart-grid"/>`).join('');
   const n = values.length;
   const mins = Math.round((n * 5) / 60);
-  const path = linePath(values, W - 6, plotH, lo, hi, L, 3);
+  const path = linePath(values, W - 6, plotH, lo, hi, L, 3, !!ch.flip);
   const last = [...values].reverse().find((v) => v != null);
   const dot = last != null && n > 1 ? `<circle cx="${W - 6}" cy="${y(last).toFixed(1)}" r="3.6" class="chart-dot"/>` : '';
   const gaps = values.some((v) => v == null) ? '<text x="' + (L + 6) + '" y="14" class="chart-axis">gaps = no signal</text>' : '';

@@ -173,7 +173,7 @@ export const CONFIG = {
       links: [['air', 'pr'], ['ballast', 'depth'], ['power', 'load']] },
     { id: 'ballast', name: 'Ballast', icon: 'anchor', primary: 'depth', tile: ['depth', 'trim'],
       channels: [
-        { id: 'depth', label: 'Depth', unit: 'm', min: 300, max: 700, dec: 0, init: 500, bands: { ok: [470, 530], caution: [430, 570], alert: [380, 620] }, meter: 'ruler' },
+        { id: 'depth', label: 'Depth', unit: 'm', min: 300, max: 700, dec: 0, init: 500, bands: { ok: [470, 530], caution: [430, 570], alert: [380, 620] }, meter: 'ruler', flip: true },
         { id: 'trim', label: 'Buoyancy trim', unit: '%', min: -40, max: 40, dec: 1, init: 0, tau: 25, bands: { ok: [-6, 6], caution: [-12, 12], alert: [-20, 20] }, meter: 'dial' },
       ],
       controls: [
