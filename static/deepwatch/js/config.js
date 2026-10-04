@@ -22,7 +22,7 @@ export const CONTRAST = {
   highContrastCvdDeltaE: 15,
   monoStepL: 7, // mono themes: min lightness (L*) step between consecutive states
   monoHueSpread: 25, // mono themes: max hue spread (degrees) across the four state colours
-  accentDeltaE: 18, // accent must stay this far from Alert and Critical (non-mono themes)
+  accentDeltaE: 18, buttonText: 7, // accent must stay this far from Alert and Critical (non-mono themes)
 };
 
 const ctl = {

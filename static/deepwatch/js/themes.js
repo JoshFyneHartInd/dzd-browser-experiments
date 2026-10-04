@@ -1,11 +1,12 @@
 // Theme registry. To add a theme: add one entry to THEMES below (id, name, group, scheme, mono, tokens).
 // Tokens are colours only. Any token you leave out is derived (see expandTokens) so most entries need just
 // bg, surface, text, accent and the four state colours (healthy, caution, alert, critical).
-import { mix, ensureContrast, rotateHue, contrast } from './color.js';
+import { CONTRAST } from './config.js';
+import { mix, ensureContrast, rotateHue, contrast, lum } from './color.js';
 
 export const DEFAULT_THEME = 'midnight';
 export const THEME_STORAGE_KEY = 'deepwatch.theme';
-export const TOKEN_KEYS = ['bg', 'surface', 'surface2', 'border', 'text', 'text2', 'text3', 'accent', 'onAccent',
+export const TOKEN_KEYS = ['bg', 'surface', 'surface2', 'border', 'text', 'text2', 'text3', 'accent', 'onAccent', 'btn',
   'healthy', 'caution', 'alert', 'critical', 'c1', 'c2', 'c3', 'c4', 'focus', 'tint', 'bgImage', 'bw', 'ring'];
 export const STATE_KEYS = ['healthy', 'caution', 'alert', 'critical'];
 
@@ -21,7 +22,10 @@ export function expandTokens(t, { mono = false } = {}) {
   const bgs = [o.bg, o.surface, o.surface2, ...tints];
   o.text2 ??= ensureContrast(mix(o.text, o.surface, 0.2), bgs, 4.6);
   o.text3 ??= ensureContrast(mix(o.text, o.surface, 0.45), bgs, 3.3);
-  o.onAccent ??= contrast(o.accent, '#000000') >= contrast(o.accent, '#ffffff') ? '#000000' : '#ffffff';
+  // Button text: white on light themes, black on dark ones (unless the theme sets it). The button fill is the
+  // accent nudged just far enough to reach AAA (7:1) against that text, so Start/Next/Resume always read clearly.
+  o.onAccent ??= lum(o.surface) > 0.4 ? '#ffffff' : '#000000';
+  o.btn ??= ensureContrast(o.accent, [o.onAccent], CONTRAST.buttonText);
   const grounds = [o.bg, o.surface, o.surface2];
   o.focus ??= ensureContrast(o.accent, grounds, 3.4);
   o.c1 ??= o.accent;

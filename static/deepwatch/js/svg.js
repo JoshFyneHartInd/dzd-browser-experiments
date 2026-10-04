@@ -53,7 +53,7 @@ const DASH = { healthy: '', caution: '2 3', alert: '6 3', critical: '' };
 const WIDTH = { healthy: 3, caution: 4, alert: 5, critical: 7 };
 
 /** Arc gauge skeleton: threshold ring (dash style differs per state), value arc, marker. */
-export function arcGaugeHTML(ch, cls = '') {
+export function arcGaugeHTML(ch, cls = '', { text = false } = {}) {
   const segs = bandIntervals(ch).map((b) => {
     const t0 = (b.a - ch.min) / (ch.max - ch.min), t1 = (b.b - ch.min) / (ch.max - ch.min);
     return `<path d="${arcPath(50, 50, 44, t0, t1)}" class="ring ring-${b.state}" stroke-dasharray="${DASH[b.state]}" stroke-width="${WIDTH[b.state]}" fill="none"/>`;
@@ -63,7 +63,19 @@ export function arcGaugeHTML(ch, cls = '') {
     <path class="arc-value" d="" fill="none" stroke-width="7" stroke-linecap="round"/>
     <circle class="arc-dot" r="4.6"/>
     ${segs}
+    ${text ? '<text class="arc-num" x="50" y="53" text-anchor="middle" data-k="val">--</text><text class="arc-unit" x="50" y="68" text-anchor="middle" data-k="unit"></text>' : ''}
   </svg>`;
+}
+/** Size the centred number so it always fits inside the ring (viewBox units). */
+export function setArcText(svg, num, unit, noSig) {
+  const n = svg.querySelector('.arc-num'), u = svg.querySelector('.arc-unit');
+  if (n.textContent !== num) n.textContent = num;
+  if (u.textContent !== unit) u.textContent = unit;
+  const len = num.length;
+  const size = noSig ? 9 : len <= 2 ? 30 : len === 3 ? 27 : len === 4 ? 22 : len === 5 ? 18 : 15;
+  if (n.getAttribute('font-size') !== String(size)) n.setAttribute('font-size', size);
+  n.classList.toggle('nosig', !!noSig);
+  u.setAttribute('font-size', unit.length > 5 ? 8 : 10);
 }
 export function updateArc(svg, ch, value, state) {
   const val = svg.querySelector('.arc-value'), dot = svg.querySelector('.arc-dot');

@@ -101,7 +101,7 @@ function buildDetail(sd) {
   const maint = sd.controls.find((c) => c.id === 'maint');
   if (sd.id === 'instruments') controls.append(this.buildSensorTable());
   for (const spec of sd.controls) if (spec.id !== 'maint') controls.append(this.buildControl(sd, spec));
-  controls.append(h('h3', { class: 'sub', text: 'Maintenance' }), this.buildControl(sd, maint));
+  if (maint) controls.append(h('h3', { class: 'sub', text: 'Maintenance' }), this.buildControl(sd, maint)); // not every system has equipment to service
 
   const links = h('section', { class: 'links', 'aria-label': 'Linked systems' }, h('h3', { text: 'Linked systems' }));
   const lrow = h('div', { class: 'link-row' });
@@ -117,7 +117,7 @@ function buildDetail(sd) {
 
   const wear = h('section', { class: 'wear', 'aria-label': 'Wear' });
   wear.innerHTML = `<h3>Wear</h3><div class="wear-row"><div class="wearbar" role="progressbar" aria-label="${sd.name} wear" aria-valuemin="0" aria-valuemax="100"><i></i></div><span data-k="wearv"></span></div>
-    <p class="hint">Wear rises with stress and time out of band. High wear raises drift, failures and gauge error. Maintenance lowers it.</p>`;
+    <p class="hint">Wear rises with stress and time out of band. High wear raises drift, failures and gauge error.${maint ? ' Maintenance lowers it.' : ''}</p>`;
   dv.wearBar = wear.querySelector('.wearbar');
   dv.wearFill = wear.querySelector('.wearbar i');
   dv.wearText = wear.querySelector('[data-k="wearv"]');

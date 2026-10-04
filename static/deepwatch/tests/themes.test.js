@@ -2,6 +2,7 @@
 // Fails when any theme misses its group's contrast target. Prints warnings for Dark/Light text pairs between 3:1 and 4.5:1.
 import { THEMES, TOKEN_KEYS, STATE_KEYS } from '../js/themes.js';
 import { CONTRAST } from '../js/config.js';
+import { readFileSync } from 'node:fs';
 import { contrast, mix, deltaE, simulateCVD, CVD_TYPES, lightness, rgb2hsl } from '../js/color.js';
 
 const failures = [], warnings = [];
@@ -43,9 +44,13 @@ for (const t of THEMES) {
       else if (!core && r < CONTRAST.relaxedTextWarn) warn(t, `${fg} on ${gn} is ${r.toFixed(2)}:1 (between ${CONTRAST.relaxedFloor}:1 and ${CONTRAST.relaxedTextWarn}:1)`);
     }
   }
-  const ra = contrast(k.onAccent, k.accent);
-  if (ra < textMin) fail(t, `onAccent on accent is ${ra.toFixed(2)}:1, needs ${textMin}:1`);
-  else if (!core && ra < CONTRAST.relaxedTextWarn) warn(t, `onAccent on accent is ${ra.toFixed(2)}:1`);
+  // Primary buttons (Start, Next, Resume): label on fill must be comfortably readable, and the fill must stand out from the page.
+  const ra = contrast(k.onAccent, k.btn);
+  if (ra < CONTRAST.buttonText) fail(t, `button label on fill is ${ra.toFixed(2)}:1, needs ${CONTRAST.buttonText}:1`);
+  for (const g of ['bg', 'surface', 'surface2']) {
+    const rb = contrast(k.btn, k[g]);
+    if (rb < (core ? CONTRAST.coreUi : CONTRAST.relaxedFloor)) fail(t, `button fill on ${g} is ${rb.toFixed(2)}:1`);
+  }
 
   // Icons, gauges, state indicators, chart lines, focus ring
   const uiPairs = [];
@@ -103,6 +108,17 @@ if (warnings.length) {
   for (const [name, ws] of Object.entries(byTheme)) console.log(`  ${name}: ${ws.length} pair(s); lowest: ${ws.map((w) => parseFloat(w.match(/([\d.]+):1/)[1])).sort((a, b) => a - b)[0]}:1`);
   if (process.argv.includes('--verbose')) warnings.forEach((w) => console.log('  - ' + w));
 }
+// Every var(--x) in the stylesheet must be a theme token or declared in the CSS itself.
+// (A camelCase/kebab mismatch once left button labels with no colour set: the check keeps that from recurring.)
+{
+  const css = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8') + readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const kebab = (k) => '--' + k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
+  const known = new Set(TOKEN_KEYS.map(kebab));
+  for (const m of css.matchAll(/(--[a-zA-Z0-9-]+)\s*:/g)) known.add(m[1]);
+  const used = new Set([...css.matchAll(/var\((--[a-zA-Z0-9-]+)/g)].map((m) => m[1]));
+  for (const v of used) if (!known.has(v)) failures.push(`stylesheet uses ${v}, which no theme or rule defines`);
+}
+
 if (failures.length) {
   console.log(`\n${failures.length} FAILURE(S):`);
   failures.forEach((f) => console.log('  x ' + f));
