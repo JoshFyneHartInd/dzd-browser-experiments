@@ -1,6 +1,6 @@
 // Node simulation tests (no DOM): node tests/sim.test.js
 import { createSim, run, tick, DT, setControl, controlPending, startJob, jobInfo, forceEvent, serializeSim, restoreSim, critCountdown } from '../js/sim.js';
-import { CONFIG, STATES, SENSOR_SYSTEMS } from '../js/config.js';
+import { CONFIG, STATES, SENSOR_SYSTEMS, hasWear } from '../js/config.js';
 import { EVENT_DEFS } from '../js/events.js';
 
 let pass = 0, fail = 0;
@@ -418,6 +418,26 @@ test('at least one event type needs a second gauge, and one involves a faulty ga
   const sim = quiet(7); forceEvent(sim, 'sensor', { sys: 'power', mode: 'phantom' }); run(sim, 15);
   ok(sim.st.power.t === 0 && sim.st.power.s >= 2, 'looks bad on the tile, is fine in truth');
   ok(sim.sensors.power.health < 60, 'Instruments is the second gauge that explains it');
+});
+
+console.log('Wear');
+test('systems you cannot service never wear, while serviceable ones still do', () => {
+  const sim = quiet(7);
+  for (const id of ['consumables', 'fuel']) ok(sim.wear[id] === 0, `${id} starts with no wear (${sim.wear[id]})`);
+  forceEvent(sim, 'leak', { size: 'large' }); // push some systems out of band so wear would accumulate
+  run(sim, 1500);
+  for (const id of ['consumables', 'fuel']) ok(sim.wear[id] === 0, `${id} still has no wear after a long run (${sim.wear[id]})`);
+  ok(sim.wear.power > 3 && sim.wear.hull > 3, `power and hull do wear (${sim.wear.power.toFixed(1)}, ${sim.wear.hull.toFixed(1)})`);
+  for (const sd of CONFIG.systems) ok(hasWear(sd) === sd.controls.some((c) => c.id === 'maint'), `${sd.id}: wear matches having Maintenance`);
+});
+test('an older save that wore out Supplies and Fuel is cleaned up when loaded', () => {
+  const a = quiet(2);
+  const s = JSON.parse(JSON.stringify(serializeSim(a)));
+  s.wear.fuel = 40; s.wear.consumables = 25;
+  const b = restoreSim(s);
+  ok(b.wear.fuel === 0 && b.wear.consumables === 0, 'wear cleared');
+  run(b, 60);
+  ok(b.wear.fuel === 0 && b.wear.consumables === 0, 'and stays cleared');
 });
 
 console.log('Persistence and determinism');

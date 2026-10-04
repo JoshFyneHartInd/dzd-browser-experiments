@@ -187,6 +187,49 @@ await back();
   await back();
 }
 
+
+// ---- Wear is only shown for systems you can service ----
+{
+  await page.evaluate(() => { window.deepwatch.speed = 1; });
+  for (const [sys, shows] of [['fuel', false], ['consumables', false], ['power', true], ['hull', true]]) {
+    await page.locator(`.tile[data-sys="${sys}"]`).click(); await page.waitForSelector('.detail .detail-grid'); await page.waitForTimeout(250);
+    const has = (await page.locator('.detail section.wear').count()) > 0;
+    expect(`${sys} ${shows ? 'shows' : 'hides'} its Wear section`, has === shows);
+    // Linked systems and Wear sit in the left column, under the charts; Recent events is in the right column
+    const where = await page.evaluate(() => ({
+      links: !!document.querySelector('.col-left section.links'),
+      wear: !!document.querySelector('.col-left section.wear'),
+      recent: !!document.querySelector('.col-right details.recent'),
+      order: [...document.querySelectorAll('.col-left > *')].map((e) => e.className.split(' ')[0]),
+    }));
+    expect(`${sys}: Linked systems is in the left column`, where.links);
+    expect(`${sys}: Wear is in the left column when present`, where.wear === shows);
+    expect(`${sys}: Recent events is in the right column`, where.recent);
+    expect(`${sys}: left column ends with links${shows ? ', wear' : ''}`, where.order.slice(-(shows ? 2 : 1)).join() === (shows ? 'links,wear' : 'links'), where.order.join());
+    const chartsBottom = await page.evaluate(() => document.querySelector('.col-left .charts')?.getBoundingClientRect().bottom ?? 0);
+    const linksTop = await page.evaluate(() => document.querySelector('.col-left section.links').getBoundingClientRect().top);
+    expect(`${sys}: Linked systems is below the charts`, linksTop >= chartsBottom - 1, `${linksTop} vs ${chartsBottom}`);
+    await back();
+  }
+
+  // Recent events: collapsed by default, opens and closes, and remembers its state while you stay in the run
+  await page.locator('.tile[data-sys="power"]').click(); await page.waitForSelector('.detail .detail-grid');
+  const rec = page.locator('details.recent');
+  expect('Recent events starts collapsed', !(await rec.evaluate((e) => e.open)));
+  expect('collapsed Recent events hides its list', !(await page.locator('.recent-list').isVisible()));
+  await page.evaluate(() => { const s = window.deepwatch.sim; s.log?.push?.({ t: s.t, sys: 'power', text: 'Test entry', level: 'info' }); });
+  await rec.locator('summary').click();
+  expect('clicking the header opens Recent events', await rec.evaluate((e) => e.open));
+  expect('opened Recent events shows its list', await page.locator('.recent-list').isVisible());
+  await back();
+  await page.locator('.tile[data-sys="power"]').click(); await page.waitForSelector('.detail .detail-grid');
+  expect('Recent events stays open after leaving and returning', await page.locator('details.recent').evaluate((e) => e.open));
+  await page.locator('details.recent summary').click();
+  expect('clicking again collapses it', !(await page.locator('details.recent').evaluate((e) => e.open)));
+  await page.screenshot({ path: process.env.DEEPWATCH_SHOT2 || '/tmp/detail-layout.png' });
+  await back();
+}
+
 await browser.close();
 if (errors.length) { console.log(`${errors.length} FAILURE(S):`); errors.forEach((e) => console.log('  x ' + e)); process.exit(1); }
 console.log(`UI smoke test: opened ${ids.length} detail views with no errors.`);

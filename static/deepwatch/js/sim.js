@@ -1,5 +1,5 @@
 // Deepwatch simulation core. No DOM, no timers: call tick(sim, dt) with a fixed dt.
-import { CONFIG, STATES, STATE_META, SYSTEM_BY_ID, SENSOR_SYSTEMS, channelOf } from './config.js';
+import { CONFIG, STATES, STATE_META, SYSTEM_BY_ID, SENSOR_SYSTEMS, channelOf, hasWear } from './config.js';
 import { clamp, lerp, relax, rand, randRange, gauss, ouStep } from './util.js';
 import { pushLog, applyEvents, updateEvents, scheduleInitial, forceEvent as forceEventRaw, onPatch, crisisState, activeNotices } from './events.js';
 
@@ -41,7 +41,8 @@ export function createSim({ difficulty = 'standard', seed = (Date.now() >>> 0) }
   for (const s of CONFIG.systems) {
     sim.v[s.id] = {}; sim.shown[s.id] = {}; sim.trend[s.id] = {};
     for (const ch of s.channels) { sim.v[s.id][ch.id] = ch.init; sim.shown[s.id][ch.id] = ch.init; sim.trend[s.id][ch.id] = []; }
-    sim.wear[s.id] = 3 + rand(sim) * 5;
+    const startWear = 3 + rand(sim) * 5; // always drawn, so seeded runs stay identical
+    sim.wear[s.id] = hasWear(s) ? startWear : 0;
     sim.lastMaint[s.id] = -1;
     sim.timeIn[s.id] = { total: 0, healthy: 0 };
     sim.st[s.id] = { t: 0, s: 0, chT: {}, noData: false, hold: 0, noDataLogged: false };
@@ -447,6 +448,7 @@ export function buildCauseChain(sim, sys) {
 function stepWear(sim, dt) {
   const W = CONFIG.wear;
   for (const sd of CONFIG.systems) {
+    if (!hasWear(sd)) { sim.wear[sd.id] = 0; continue; }
     const inc = W.base + W.byState[sim.st[sd.id].t];
     sim.wear[sd.id] = clamp(sim.wear[sd.id] + inc * dt, 0, 100);
   }
@@ -518,6 +520,7 @@ export function restoreSim(obj) {
   if (sim.nextCrisisAt == null) sim.nextCrisisAt = Infinity;
   // Older saves: add any control or job that did not exist yet (for example the per-item supply orders), drop the retired one.
   delete sim.jobs['consumables.order'];
+  for (const sd of CONFIG.systems) if (!hasWear(sd)) sim.wear[sd.id] = 0; // older saves wore these out
   for (const sd of CONFIG.systems) for (const c of sd.controls) {
     const key = `${sd.id}.${c.id}`;
     if (c.type === 'job') sim.jobs[key] ??= { active: false, start: 0, end: 0, cdUntil: 0 };

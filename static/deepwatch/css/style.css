@@ -219,9 +219,19 @@ button { cursor: pointer; }
 .chart-axis { fill: var(--text3); font-size: 10px; font-family: inherit; }
 .chart-grid { stroke: var(--border); stroke-width: 0.6; stroke-dasharray: 2 4; }
 
-.col-right section { background: var(--surface); border: var(--bw) solid var(--border); border-radius: 12px; padding: 12px 14px; }
-.col-right h3 { font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 8px; }
+.col-left > section, .col-right > section, .col-right > details { background: var(--surface); border: var(--bw) solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.col-left h3, .col-right h3 { font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 8px; }
 .col-right h3.sub { margin-top: 16px; }
+.recent summary { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: -12px -14px; padding: 12px 14px; cursor: pointer; list-style: none; border-radius: 12px;
+  font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); }
+.recent summary::-webkit-details-marker { display: none; }
+.recent summary::before { content: ''; width: 0; height: 0; border-left: 7px solid currentColor; border-top: 5px solid transparent; border-bottom: 5px solid transparent; transition: transform 0.15s; }
+.recent[open] summary::before { transform: rotate(90deg); }
+.recent[open] summary { margin-bottom: 0; }
+.recent summary:hover { color: var(--text); }
+.recent summary:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.recent-count { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text3); }
+.recent[open] .recent-list { margin-top: 14px; }
 .ctl { margin-bottom: 14px; }
 .ctl:last-child { margin-bottom: 0; }
 .ctl-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }

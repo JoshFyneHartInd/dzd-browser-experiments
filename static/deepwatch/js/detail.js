@@ -1,5 +1,5 @@
 // System detail screen: readouts, trend charts, linked readouts, controls with pending indicators, wear, recent events.
-import { CONFIG, STATES, STATE_META, SYSTEM_BY_ID, SENSOR_SYSTEMS } from './config.js';
+import { CONFIG, STATES, STATE_META, SYSTEM_BY_ID, SENSOR_SYSTEMS, hasWear } from './config.js';
 import { formatValue, stateIndex, setControl, controlPending, jobInfo, startJob } from './sim.js';
 import { h, setText, setAttr, setClass, ph, clockText } from './dom.js';
 import { stateIcon, trendChart } from './svg.js';
@@ -133,11 +133,18 @@ function buildDetail(sd) {
   dv.wearFill = wear.querySelector('.wearbar i');
   dv.wearText = wear.querySelector('[data-k="wearv"]');
 
-  const recent = h('section', { class: 'recent', 'aria-label': 'Recent events' }, h('h3', { text: 'Recent events' }));
+  // Recent events: collapsed unless the player opened it (remembered for the session, so switching systems keeps their choice)
+  const recent = h('details', { class: 'recent' });
+  dv.recentCount = h('span', { class: 'recent-count' });
+  recent.append(h('summary', {}, h('span', { text: 'Recent events' }), dv.recentCount));
+  recent.open = !!this.recentOpen;
+  recent.addEventListener('toggle', () => { this.recentOpen = recent.open; });
   dv.recentList = h('ul', { class: 'recent-list' });
   recent.append(dv.recentList);
 
-  right.append(controls, links, wear, recent);
+  dv.hasWear = hasWear(sd);
+  left.append(links, ...(dv.hasWear ? [wear] : [])); // under the trend charts; no Wear card for systems that cannot be serviced
+  right.append(controls, recent);
   main.append(head, h('div', { class: 'detail-grid' }, left, right));
   d.append(strip, main);
 }
@@ -355,16 +362,19 @@ function updateDetail(sim, force = false) {
     if (l.last !== sig) { l.last = sig; setText(l.v, txt); l.st.innerHTML = cs >= 0 && l.lch.bands ? stateIcon(STATES[cs], 18) : ''; }
   }
   const w = sim.wear[sd.id];
-  dv.wearFill.style.width = `${w.toFixed(0)}%`;
-  setAttr(dv.wearBar, 'aria-valuenow', Math.round(w));
-  setText(dv.wearText, `${Math.round(w)}%`);
-  setClass(dv.wearBar, 'high', w >= 50);
+  if (dv.hasWear) {
+    dv.wearFill.style.width = `${w.toFixed(0)}%`;
+    setAttr(dv.wearBar, 'aria-valuenow', Math.round(w));
+    setText(dv.wearText, `${Math.round(w)}%`);
+    setClass(dv.wearBar, 'high', w >= 50);
+  }
 
   const lastLog = sim.log[sim.log.length - 1];
   if (dv.last.log !== lastLog || force) {
     dv.last.log = lastLog;
     dv.recentList.innerHTML = '';
     const mine = sim.log.filter((e) => e.sys === sd.id).slice(-6).reverse();
+    setText(dv.recentCount, mine.length ? ` (${mine.length})` : '');
     if (!mine.length) dv.recentList.append(h('li', { class: 'muted', text: 'Nothing to report' }));
     for (const e of mine) {
       const li = h('li', { html: `<time>${clockText(e.t)}</time><span></span>` });

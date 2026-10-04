@@ -33,6 +33,7 @@ Add `?debug=1`. A collapsed "Debug" tab appears at the bottom: speed x1/x10/x60,
 - **Simulation:** fixed 4 Hz step, separate from the DOM, with a seeded RNG so runs and tests are repeatable.
 - **Countdown:** the lose timer reads true state, not displayed state. A broken gauge can hide a problem but never the countdown banner.
 - **Instruments:** its self-test reports sensor errors truthfully. It is how you find out which other gauge is lying.
+- **Wear:** only systems with a Maintenance control wear out (`hasWear` in `js/config.js`). Supplies and Fuel cannot be serviced, so they have no wear and no Wear section.
 - **Saves:** one run in `localStorage` (`deepwatch.run`), autosaved every 30 s and on pause or tab hide. Settings and best scores are under `deepwatch.global`.
 - **Icons:** if the icon font fails to load, buttons fall back to text labels. Status icons are inline SVG with distinct shapes, so they never depend on the font or on colour.
 

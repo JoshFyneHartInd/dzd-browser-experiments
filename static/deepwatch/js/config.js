@@ -262,4 +262,6 @@ export const CONFIG = {
 // Systems whose gauges can be wrong (everything except Instruments, which reports its own self-test).
 export const SENSOR_SYSTEMS = CONFIG.systems.filter((s) => s.id !== 'instruments').map((s) => s.id);
 export const SYSTEM_BY_ID = Object.fromEntries(CONFIG.systems.map((s) => [s.id, s]));
+/** Only systems you can service wear out: no Maintenance control means no wear (nothing the player could do about it). */
+export const hasWear = (sd) => sd.controls.some((c) => c.id === 'maint');
 export const channelOf = (sysId, chId) => SYSTEM_BY_ID[sysId].channels.find((c) => c.id === chId);
