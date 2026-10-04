@@ -84,11 +84,11 @@ button { cursor: pointer; }
 .stage { flex: 1; min-height: 0; position: relative; display: flex; }
 
 .crit-bar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: color-mix(in srgb, var(--critical) 26%, var(--surface)); border-bottom: calc(var(--bw) * 3) solid var(--critical); font-size: 1.05rem; flex: none; }
-.crisis-banner { position: absolute; z-index: 30; left: 0; right: 0; top: 56px; display: flex; align-items: center; gap: 18px; padding: 16px 28px;
-  background: color-mix(in srgb, var(--critical) 30%, var(--surface)); border-top: calc(var(--bw) * 4) solid var(--critical); border-bottom: calc(var(--bw) * 4) solid var(--critical); pointer-events: none; }
-.crisis-banner[data-phase="warning"] { padding: 22px 28px; }
-.crisis-title { font-size: clamp(1.3rem, 3.4vh, 2rem); font-weight: 800; letter-spacing: 0.02em; }
-.crisis-sub { font-size: clamp(1rem, 2.4vh, 1.3rem); margin-top: 2px; }
+.crisis-banner { flex: none; display: flex; align-items: center; gap: 14px; padding: 8px 16px;
+  background: color-mix(in srgb, var(--critical) 30%, var(--surface)); border-bottom: calc(var(--bw) * 3) solid var(--critical); }
+.crisis-banner svg { flex: none; }
+.crisis-title { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.02em; }
+.crisis-sub { font-size: 0.9375rem; margin-top: 1px; }
 
 /* ---------- Dashboard tiles ---------- */
 .dashboard { flex: 1; min-width: 0; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 10px; }

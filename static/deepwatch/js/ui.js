@@ -195,8 +195,8 @@ export class GameUI {
     this.crisisBanner.dataset.phase = cr.phase;
     const secs = Math.ceil(cr.secondsToEffect);
     const html = cr.phase === 'warning'
-      ? `${stateIcon('critical', 44)}<div><div class="crisis-title">CRISIS WARNING: ${cr.title.replace('CRISIS: ', '')}</div><div class="crisis-sub">Critical effect begins in <b>${secs} s</b>. ${CRISIS_HINT[cr.def] || ''}</div></div>`
-      : `${stateIcon('critical', 36)}<div><div class="crisis-title">CRISIS IN PROGRESS: ${cr.title.replace('CRISIS: ', '')}</div><div class="crisis-sub">${CRISIS_HINT[cr.def] || ''}</div></div>`;
+      ? `${stateIcon('critical', 30)}<div><div class="crisis-title">CRISIS WARNING: ${cr.title.replace('CRISIS: ', '')}</div><div class="crisis-sub">Critical effect begins in <b>${secs} s</b>. ${CRISIS_HINT[cr.def] || ''}</div></div>`
+      : `${stateIcon('critical', 30)}<div><div class="crisis-title">CRISIS IN PROGRESS: ${cr.title.replace('CRISIS: ', '')}</div><div class="crisis-sub">${CRISIS_HINT[cr.def] || ''}</div></div>`;
     if (this.cache.crisis !== html) { this.cache.crisis = html; this.crisisBanner.innerHTML = html; }
   }
 

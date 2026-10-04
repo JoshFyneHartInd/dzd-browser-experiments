@@ -277,6 +277,31 @@ await back();
   expect('Escape on a folded picker closes the menu', (await page.locator('.menu-panel').count()) === 0);
 }
 
+// ---- Crisis banner pushes the screen down instead of covering it ----
+{
+  await page.locator('.debug-panel summary').click();
+  await page.locator('[data-k="ev"]').selectOption('crisis_breach');
+  await page.locator('[data-k="fire"]').click();
+  await page.waitForSelector('.crisis-banner:not([hidden])');
+  await page.locator('.debug-panel summary').click();
+  for (const view of ['dashboard', 'detail']) {
+    if (view === 'detail') { await page.locator('.tile[data-sys="hull"]').click(); await page.waitForSelector('.detail .detail-grid'); }
+    const r = await page.evaluate((view) => {
+      const b = document.querySelector('.crisis-banner').getBoundingClientRect();
+      const st = document.querySelector('.stage').getBoundingClientRect();
+      const first = document.querySelector(view === 'detail' ? '.detail [data-k="back"]' : '.tile[data-sys]');
+      const f = first.getBoundingClientRect();
+      const hit = document.elementFromPoint(f.x + f.width / 2, f.y + f.height / 2);
+      return { bannerBottom: b.bottom, bannerH: b.height, stageTop: st.top, clickable: first === hit || first.contains(hit) };
+    }, view);
+    expect(`crisis banner sits above the ${view}, not over it`, r.bannerBottom <= r.stageTop + 1, JSON.stringify(r));
+    expect(`crisis banner is compact (${view})`, r.bannerH < 90, JSON.stringify(r));
+    expect(`first control on the ${view} is clickable during a crisis`, r.clickable, JSON.stringify(r));
+    await page.screenshot({ path: `/tmp/crisis-${view}.png` });
+  }
+  await back();
+}
+
 await browser.close();
 if (errors.length) { console.log(`${errors.length} FAILURE(S):`); errors.forEach((e) => console.log('  x ' + e)); process.exit(1); }
 console.log(`UI smoke test: opened ${ids.length} detail views with no errors.`);
