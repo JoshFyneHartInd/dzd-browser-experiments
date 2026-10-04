@@ -66,16 +66,19 @@ export function arcGaugeHTML(ch, cls = '', { text = false } = {}) {
     ${text ? '<text class="arc-num" x="50" y="53" text-anchor="middle" data-k="val">--</text><text class="arc-unit" x="50" y="68" text-anchor="middle" data-k="unit"></text>' : ''}
   </svg>`;
 }
-/** Size the centred number so it always fits inside the ring (viewBox units). */
+/** Size the number and centre its digits on the ring centre (50,50); the unit hangs below, outside the centring. */
 export function setArcText(svg, num, unit, noSig) {
   const n = svg.querySelector('.arc-num'), u = svg.querySelector('.arc-unit');
   if (n.textContent !== num) n.textContent = num;
   if (u.textContent !== unit) u.textContent = unit;
   const len = num.length;
-  const size = noSig ? 9 : len <= 2 ? 30 : len === 3 ? 27 : len === 4 ? 22 : len === 5 ? 18 : 15;
-  if (n.getAttribute('font-size') !== String(size)) n.setAttribute('font-size', size);
+  const size = noSig ? 9 : len <= 2 ? 24 : len === 3 ? 21 : len === 4 ? 18 : len === 5 ? 15 : 13;
+  const CAP = 0.72; // digit height as a fraction of font size (Inter)
+  const base = 50 + (size * CAP) / 2;
+  const usize = unit.length > 5 ? 7.5 : 9;
+  n.setAttribute('font-size', size); n.setAttribute('y', base.toFixed(2));
+  u.setAttribute('font-size', usize); u.setAttribute('y', (base + usize * 0.72 + 3.2).toFixed(2));
   n.classList.toggle('nosig', !!noSig);
-  u.setAttribute('font-size', unit.length > 5 ? 8 : 10);
 }
 export function updateArc(svg, ch, value, state) {
   const val = svg.querySelector('.arc-value'), dot = svg.querySelector('.arc-dot');
