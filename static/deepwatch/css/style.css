@@ -129,14 +129,29 @@ button { cursor: pointer; }
 .station-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: none; }
 .station-day { color: var(--text2); font-size: 0.875rem; }
 
-/* Arc gauges */
-.arc { display: block; }
+/* Meters: every shape takes its level colour from --mc (set by state); shape and fill amount carry the level too */
+.meter { display: block; --mc: var(--accent); }
+.meter[data-state="caution"] { --mc: var(--caution); }
+.meter[data-state="alert"] { --mc: var(--alert); }
+.meter[data-state="critical"] { --mc: var(--critical); }
 .arc-track { stroke: var(--border); }
-.arc-value { stroke: var(--accent); }
+.arc-value { stroke: var(--mc); }
 .arc-dot { fill: var(--text); }
-.arc[data-state="caution"] .arc-value { stroke: var(--caution); }
-.arc[data-state="alert"] .arc-value { stroke: var(--alert); }
-.arc[data-state="critical"] .arc-value { stroke: var(--critical); }
+.m-well { fill: var(--surface2); }
+.m-outline { fill: none; stroke: var(--text3); stroke-width: 2.2; }
+.m-rim { stroke-width: 4; }
+.m-fill { fill: var(--mc); }
+.m-seg { fill: var(--border); }
+.m-seg.on { fill: var(--mc); }
+.m-seg-line, .m-seg-line.on { fill: none; }
+.m-seg-line { stroke: var(--border); }
+.m-seg-line.on { stroke: var(--mc); }
+.m-nub { fill: var(--text3); }
+.m-tick { stroke: var(--surface); stroke-opacity: 0.8; }
+.m-axis { stroke: var(--text3); }
+.m-needle { stroke: var(--text); }
+.m-hub { fill: var(--text); }
+.m-chip { fill: var(--surface); fill-opacity: 0.9; stroke: var(--border); stroke-width: 0.8; }
 .ring-healthy { stroke: var(--healthy); opacity: 0.4; }
 .ring-caution { stroke: var(--caution); } .ring-alert { stroke: var(--alert); } .ring-critical { stroke: var(--critical); }
 
@@ -222,6 +237,55 @@ button { cursor: pointer; }
 .fader input::-moz-range-thumb { width: var(--thumb); height: var(--thumb); border-radius: 50%; background: var(--accent); border: 3px solid var(--surface); }
 .fader input:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; border-radius: 8px; }
 .fader-ghost { position: absolute; top: 50%; left: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--f)); width: 5px; height: 26px; border-radius: 2px; background: var(--text); transform: translate(-50%, -50%); pointer-events: none; transition: left 0.25s linear; }
+/* ---------- Control variety: knob / valve wheel, vertical fader, step selector, lever, guarded switch, two-step button ---------- */
+.knob-wrap { display: flex; justify-content: center; padding: 6px 0 2px; }
+.knob { width: 124px; height: 124px; touch-action: none; cursor: grab; overflow: visible; border-radius: 50%; -webkit-tap-highlight-color: transparent; }
+.knob:active { cursor: grabbing; }
+.knob:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 6px; }
+.k-track { stroke: var(--border); } .k-value { stroke: var(--accent); } .k-tick { stroke: var(--text3); }
+.k-body { fill: var(--surface2); stroke: var(--text3); stroke-width: 2.5; }
+.k-pointer-line { stroke: var(--accent); }
+.k-rim, .k-spoke { stroke: var(--text3); } .k-rim { fill: none; } .k-hub { fill: var(--text3); } .k-pointer { fill: var(--accent); }
+.k-ghost { fill: var(--text); stroke: var(--surface); stroke-width: 1.6; }
+.overshooting .k-ghost { fill: var(--alert); }
+
+.vfader-wrap { display: flex; justify-content: center; align-items: stretch; gap: 12px; margin: 6px 0; }
+.vfader { position: relative; width: 44px; height: 168px; --thumb: 28px; --f: 0; flex: none; }
+.vfader-rot { position: absolute; left: 0; top: 0; width: 168px; height: 44px; transform-origin: 0 0; transform: translateY(168px) rotate(-90deg); }
+.vfader .fader-ghost { top: auto; left: 50%; width: 28px; height: 5px; bottom: calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--f)); transform: translate(-50%, 50%); transition: bottom 0.25s linear; }
+.overshooting .vfader .fader-ghost { height: 7px; }
+.vfader-scale { display: flex; flex-direction: column; justify-content: space-between; padding: 8px 0; font-size: 0.8125rem; font-weight: 600; color: var(--text2); }
+.vfader-scale .mid { color: var(--text3); }
+
+.steps { --n: 3; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.step { position: relative; min-height: 58px; padding: 6px 2px 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  background: var(--surface2); border: var(--bw) solid var(--border); border-radius: 10px; font-weight: 700; font-size: 0.875rem; }
+.step:hover { border-color: var(--accent); }
+.step:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.step-val { font-size: 0.72rem; font-weight: 500; color: var(--text2); }
+.step[aria-checked="true"] { background: var(--btn); color: var(--on-accent); border-color: var(--btn); }
+.step[aria-checked="true"] .step-val { color: inherit; }
+.step.is-actual .step-actual { position: absolute; bottom: 3px; left: 50%; width: 0; height: 0; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 8px solid currentColor; }
+.overshooting .step.is-actual .step-actual { border-bottom-width: 11px; }
+
+.lever { display: inline-flex; align-items: center; gap: 12px; min-height: 80px; padding: 8px 14px; background: var(--surface2); border: var(--bw) solid var(--border); border-radius: 14px; font-weight: 700; font-size: 0.875rem; }
+.lever-slot { position: relative; width: 22px; height: 62px; border-radius: 11px; background: var(--bg); border: var(--bw) solid var(--border); flex: none; }
+.lever-handle { position: absolute; left: 50%; bottom: -5px; width: 38px; height: 26px; border-radius: 8px; background: var(--text3); border: 3px solid var(--surface2); transform: translateX(-50%); transition: bottom 0.15s; }
+.lever[aria-checked="true"] { border-color: var(--accent); }
+.lever[aria-checked="true"] .lever-handle { bottom: calc(100% - 21px); background: var(--btn); }
+.lever .switch-text { min-width: 30px; text-align: left; }
+.lever:focus-visible, .switch:focus-visible, .guard-cover:focus-visible { outline: var(--ring) solid var(--focus); outline-offset: 3px; }
+
+.guard { position: relative; display: inline-block; }
+.guard-cover { position: absolute; inset: -4px; z-index: 1; display: flex; align-items: center; justify-content: center; border-radius: 999px; cursor: pointer;
+  border: calc(var(--bw) * 2) solid var(--alert); color: var(--text); font-weight: 800; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase;
+  background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--alert) 38%, var(--surface2)) 0 8px, var(--surface2) 8px 16px); }
+.guard-cover[hidden] { display: none; }
+.guard-text { padding: 2px 8px; border-radius: 6px; background: var(--surface2); }
+.guard.is-armed .switch { box-shadow: 0 0 0 3px var(--alert); }
+.job.is-armed { border: calc(var(--bw) * 2) solid var(--alert); background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--alert) 30%, var(--surface2)) 0 8px, var(--surface2) 8px 16px); }
+.job.is-armed .job-label { background: var(--surface2); padding: 0 6px; border-radius: 4px; }
+.job.is-armed .job-sub { background: var(--surface2); padding: 0 6px; border-radius: 4px; color: var(--text); font-weight: 700; margin-top: 2px; }
 .ctl-pending { display: flex; align-items: center; gap: 8px; margin-top: 4px; padding: 6px 10px; border: var(--bw) dashed var(--accent); border-radius: 8px; font-size: 0.8125rem; font-weight: 600; flex-wrap: wrap; }
 .pend-glyph { color: var(--accent); font-size: 1.1rem; }
 .pbar { flex: 1 1 80px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; border: var(--bw) solid var(--border); }

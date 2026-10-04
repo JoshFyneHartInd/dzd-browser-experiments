@@ -2,7 +2,8 @@
 import { CONFIG, STATES, STATE_META, SYSTEM_BY_ID } from './config.js';
 import { formatValue, stateIndex, overallState, critCountdown, crisisState, activeNotices } from './sim.js';
 import { h, setText, setAttr, setClass, ph, clockText } from './dom.js';
-import { stateIcon, arcGaugeHTML, updateArc, setArcText, sparkline, patternDefs } from './svg.js';
+import { stateIcon, sparkline, patternDefs } from './svg.js';
+import { meterHTML, updateMeter, setMeterText } from './meters.js';
 import { fmtClock } from './util.js';
 import * as audio from './audio.js';
 import { installDetail } from './detail.js';
@@ -83,12 +84,12 @@ export class GameUI {
     el.innerHTML = `
       <div class="tile-head">${ph(sd.icon, 'tile-icon')}<span class="tile-name">${sd.name}</span><span class="tile-badge" data-k="badge"></span></div>
       <div class="tile-body">
-        <div class="tile-gauge">${arcGaugeHTML(prim, 'tile-arc', { text: true })}</div>
+        <div class="tile-gauge">${meterHTML(prim, prim.meter, 'tile-arc')}</div>
         <div class="tile-side"><span class="side-label">${sec.label}</span><span class="side-val" data-k="sec">--</span><span class="side-true" data-k="true" hidden></span>
           <div class="tile-spark" data-k="spark"></div></div>
       </div>`;
     el.onclick = () => this.openDetail(sd.id);
-    const t = { el, prim, sec, k: (k) => el.querySelector(`[data-k="${k}"]`), arc: el.querySelector('.arc'), last: {} };
+    const t = { el, prim, sec, k: (k) => el.querySelector(`[data-k="${k}"]`), arc: el.querySelector('.meter'), last: {} };
     this.tiles[sd.id] = t;
     return el;
   }
@@ -121,8 +122,8 @@ export class GameUI {
       const p = this.readout(sd.id, sd.primary);
       const noSig = st.noData;
       const valText = noSig ? 'NO SIGNAL' : p.text;
-      setArcText(t.arc, valText, noSig || p.ch.text ? '' : p.ch.unit, noSig);
-      updateArc(t.arc, p.ch, p.v, state);
+      setMeterText(t.arc, valText, noSig || p.ch.text ? '' : p.ch.unit, noSig);
+      updateMeter(t.arc, p.ch, p.v, state);
       const s = this.readout(sd.id, t.sec.id);
       setText(t.k('sec'), s.v == null ? '--' : `${s.text}${s.ch.unit ? ' ' + s.ch.unit : ''}`);
       const tr = t.k('true');

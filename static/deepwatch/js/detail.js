@@ -2,8 +2,10 @@
 import { CONFIG, STATES, STATE_META, SYSTEM_BY_ID, SENSOR_SYSTEMS } from './config.js';
 import { formatValue, stateIndex, setControl, controlPending, jobInfo, startJob } from './sim.js';
 import { h, setText, setAttr, setClass, ph, clockText } from './dom.js';
-import { stateIcon, arcGaugeHTML, updateArc, setArcText, trendChart } from './svg.js';
+import { stateIcon, trendChart } from './svg.js';
+import { meterHTML, updateMeter, setMeterText } from './meters.js';
 import { fmtClock } from './util.js';
+import { FADER_WIDGETS, TOGGLE_WIDGETS, sliderWidget } from './widgets.js';
 import * as audio from './audio.js';
 
 const uid = () => Math.random().toString(36).slice(2, 7);
@@ -13,6 +15,7 @@ function fmtCtl(spec, v) {
     const d = Math.round(v - 50);
     return d === 0 ? 'Neutral' : d < 0 ? `Fill ${-d}` : `Vent ${d}`;
   }
+  if (spec.stops) return spec.stops.reduce((b, s) => (Math.abs(s.v - v) < Math.abs(b.v - v) ? s : b)).label;
   return `${Math.round(v)}${spec.unit || ''}`;
 }
 
@@ -78,11 +81,11 @@ function buildDetail(sd) {
   for (const ch of sd.channels) {
     const card = h('div', { class: 'card', 'data-ch': ch.id });
     const round = !ch.text && ch.bands; // numeric channels with bands get the big centred-value gauge
-    const gauge = round ? arcGaugeHTML(ch, 'card-arc', { text: true }) : ch.text ? '' : `<div class="bar" aria-hidden="true"><i></i></div>`;
+    const gauge = round ? meterHTML(ch, ch.meter, 'card-arc') : ch.text ? '' : `<div class="bar" aria-hidden="true"><i></i></div>`;
     card.innerHTML = `<div class="card-top"><span class="card-label">${ch.label}</span><span class="card-badge" data-k="badge"></span></div>
       <div class="card-body ${round ? 'card-body-gauge' : ch.text ? '' : 'card-body-bar'}">${gauge}${round ? '' : `<div class="card-val"><span class="val" data-k="val">--</span><span class="unit" data-k="unit">${ch.unit || ''}</span></div>`}</div>
       <div class="card-true" data-k="true" hidden></div>`;
-    dv.readouts[ch.id] = { ch, el: card, k: (k) => card.querySelector(`[data-k="${k}"]`), arc: card.querySelector('.arc'), round, bar: card.querySelector('.bar i'), last: '' };
+    dv.readouts[ch.id] = { ch, el: card, k: (k) => card.querySelector(`[data-k="${k}"]`), arc: card.querySelector('.meter'), round, bar: card.querySelector('.bar i'), last: '' };
     readouts.append(card);
   }
   const charts = h('div', { class: 'charts' });
@@ -147,35 +150,34 @@ function pendingChip(text) {
 
 function buildFader(sd, spec) {
   const ui = this, key = `${sd.id}.${spec.id}`, id = `f-${uid()}`;
-  const wrap = h('div', { class: 'ctl ctl-fader', 'data-ctl': spec.id });
-  const input = h('input', { type: 'range', id, min: spec.min, max: spec.max, step: spec.step, value: this.sim.ctl[key].set, 'aria-describedby': id + '-h' });
-  const ghost = h('span', { class: 'fader-ghost', 'aria-hidden': 'true', title: 'Actual value' });
-  const track = h('div', { class: 'fader' }, input, ghost);
+  const wrap = h('div', { class: `ctl ctl-fader ctl-${spec.ui || 'slider'}`, 'data-ctl': spec.id });
+  const w = (FADER_WIDGETS[spec.ui] || sliderWidget)(spec, id, this.sim.ctl[key].set);
+  w.focusEl.setAttribute('aria-describedby', id + '-h');
+  const lab = h('label', { id: id + '-l', for: w.labelFor, text: spec.label });
+  if (!w.labelFor) w.focusEl.setAttribute('aria-labelledby', id + '-l');
   const setEl = h('b'), nowEl = h('b');
   const pend = pendingChip('Pending change');
   wrap.append(
-    h('div', { class: 'ctl-head' }, h('label', { for: id, text: spec.label }),
-      h('span', { class: 'ctl-vals' }, 'Set ', setEl, ' · Actual ', nowEl)),
-    track, pend, h('p', { class: 'hint', id: id + '-h', text: spec.hint || '' }));
+    h('div', { class: 'ctl-head' }, lab, h('span', { class: 'ctl-vals' }, 'Set ', setEl, ' · Actual ', nowEl)),
+    w.el, pend, h('p', { class: 'hint', id: id + '-h', text: spec.hint || '' }));
   let lastTick = 0, start = this.sim.ctl[key].eff;
-  input.addEventListener('input', () => {
-    const sim = ui.sim;
-    start = sim.ctl[key].eff;
-    setControl(sim, sd.id, spec.id, +input.value);
+  w.onInput = (v) => {
+    start = ui.sim.ctl[key].eff;
+    setControl(ui.sim, sd.id, spec.id, v);
     const now = performance.now();
     if (now - lastTick > 70) { lastTick = now; audio.tick(); }
-  });
-  input.addEventListener('change', () => setControl(ui.sim, sd.id, spec.id, +input.value, { log: true }));
+  };
+  w.onCommit = (v) => setControl(ui.sim, sd.id, spec.id, v, { log: true });
   const last = {};
   return {
     el: wrap,
     update(sim) {
       const c = sim.ctl[key], f = (c.eff - spec.min) / (spec.max - spec.min);
-      if (last.f !== f) { last.f = f; track.style.setProperty('--f', f.toFixed(4)); }
+      if (last.f !== f) { last.f = f; w.actual(clampF(f)); }
       setText(setEl, fmtCtl(spec, c.set));
       setText(nowEl, fmtCtl(spec, c.eff));
-      if (document.activeElement !== input && +input.value !== c.set) input.value = c.set;
-      setAttr(input, 'aria-valuetext', fmtCtl(spec, c.set));
+      w.set(c.set);
+      w.aria(fmtCtl(spec, c.set));
       const p = controlPending(sim, sd.id, spec.id);
       pend.hidden = !p.pending;
       if (p.pending) {
@@ -189,16 +191,21 @@ function buildFader(sd, spec) {
     },
   };
 }
+const clampF = (f) => Math.max(0, Math.min(1, f));
 
 function buildToggle(sd, spec) {
   const ui = this, key = `${sd.id}.${spec.id}`, id = `t-${uid()}`;
-  const wrap = h('div', { class: 'ctl ctl-toggle', 'data-ctl': spec.id });
-  const btn = h('button', { class: 'switch', type: 'button', role: 'switch', id, 'aria-checked': 'false', 'aria-describedby': id + '-h' }, h('span', { class: 'switch-knob' }), h('span', { class: 'switch-text' }));
+  const tw = (TOGGLE_WIDGETS[spec.ui] || TOGGLE_WIDGETS.switch)(spec, id);
+  const btn = tw.btn;
+  btn.setAttribute('aria-describedby', id + '-h');
+  const wrap = h('div', { class: `ctl ctl-toggle ctl-${spec.ui || 'switch'}`, 'data-ctl': spec.id });
   const pend = pendingChip('Pending change');
-  wrap.append(h('div', { class: 'ctl-head' }, h('label', { for: id, text: spec.label }), btn), pend, h('p', { class: 'hint', id: id + '-h', text: spec.hint || '' }));
+  wrap.append(h('div', { class: 'ctl-head' }, h('label', { for: id, text: spec.label }), tw.el), pend, h('p', { class: 'hint', id: id + '-h', text: spec.hint || '' }));
   btn.onclick = () => {
+    if (btn.getAttribute('aria-disabled') === 'true') return;
     const sim = ui.sim;
     setControl(sim, sd.id, spec.id, sim.ctl[key].set ? 0 : 1, { log: true });
+    if (tw.onUserToggle) tw.onUserToggle();
     audio.click();
   };
   return {
@@ -207,6 +214,7 @@ function buildToggle(sd, spec) {
       const c = sim.ctl[key], on = c.set === 1;
       setAttr(btn, 'aria-checked', on);
       setText(btn.querySelector('.switch-text'), on ? 'ON' : 'OFF');
+      if (tw.sync) tw.sync(on);
       const p = controlPending(sim, sd.id, spec.id);
       pend.hidden = !p.pending;
       if (p.pending) {
@@ -222,6 +230,7 @@ function jobButtonState(btn, info, label) {
   setText(btn.querySelector('.job-label'), label);
   btn.setAttribute('aria-disabled', info.canStart ? 'false' : 'true');
   btn.classList.toggle('is-busy', info.active);
+  if (btn._armed && info.canStart) { setText(sub, 'Press again to confirm'); bar.style.width = '0%'; return; }
   if (info.active) { setText(sub, `In progress, about ${fmtClock(info.secLeft)} left`); bar.style.width = `${(info.progress * 100).toFixed(0)}%`; }
   else if (info.cooling) { setText(sub, `Ready in ${fmtClock(info.secLeft)}`); bar.style.width = '0%'; }
   else if (info.reason) { setText(sub, info.reason); bar.style.width = '0%'; }
@@ -229,10 +238,20 @@ function jobButtonState(btn, info, label) {
 }
 const costText = (spec) => (spec.cost && spec.cost.spares ? `Uses ${spec.cost.spares} spare` : 'Ready');
 
-function jobButton(ui, key, label, onDone) {
+/** opts.arm: a two-step button. The first press arms it for a few seconds, the second press starts the job. */
+function jobButton(ui, key, label, onDone, opts = {}) {
   const btn = h('button', { class: 'btn job', type: 'button' }, h('span', { class: 'job-bar', 'aria-hidden': 'true' }), h('span', { class: 'job-label' }), h('span', { class: 'job-sub' }));
+  let timer = 0;
+  const disarm = () => { clearTimeout(timer); btn._armed = false; btn.classList.remove('is-armed'); };
   btn.onclick = () => {
     if (btn.getAttribute('aria-disabled') === 'true') return;
+    if (opts.arm && !btn._armed) {
+      btn._armed = true; btn.classList.add('is-armed'); audio.click();
+      setText(btn.querySelector('.job-sub'), 'Press again to confirm');
+      timer = setTimeout(disarm, 4000);
+      return;
+    }
+    disarm();
     if (startJob(ui.sim, key)) { audio.confirm(); if (onDone) onDone(); }
   };
   return btn;
@@ -240,8 +259,8 @@ function jobButton(ui, key, label, onDone) {
 
 function buildJob(sd, spec) {
   const key = `${sd.id}.${spec.id}`, id = `j-${uid()}`;
-  const wrap = h('div', { class: 'ctl ctl-job', 'data-ctl': spec.id });
-  const btn = jobButton(this, key, spec.label);
+  const wrap = h('div', { class: `ctl ctl-job ${spec.ui === 'arm' ? 'ctl-arm' : ''}`, 'data-ctl': spec.id });
+  const btn = jobButton(this, key, spec.label, null, { arm: spec.ui === 'arm' });
   btn.setAttribute('aria-describedby', id + '-h');
   wrap.append(btn, h('p', { class: 'hint', id: id + '-h', text: spec.hint || '' }));
   return { el: wrap, update(sim) { jobButtonState(btn, jobInfo(sim, key), spec.label); } };
@@ -303,7 +322,7 @@ function updateDetail(sim, force = false) {
     const sig = text + cs;
     if (r.last !== sig || force) {
       r.last = sig;
-      if (r.round) setArcText(r.arc, text, v == null ? '' : ch.unit || '', v == null);
+      if (r.round) setMeterText(r.arc, text, v == null ? '' : ch.unit || '', v == null);
       else {
         setText(r.k('val'), text);
         setClass(r.k('val'), 'nosig', v == null);
@@ -312,7 +331,7 @@ function updateDetail(sim, force = false) {
       const badge = r.k('badge');
       badge.innerHTML = ch.bands && cs >= 0 ? stateIcon(STATES[cs], 22) : '';
       r.el.dataset.state = ch.bands && cs >= 0 ? STATES[cs] : 'none';
-      if (r.arc) updateArc(r.arc, ch, v, cs >= 0 ? STATES[cs] : 'healthy');
+      if (r.arc) updateMeter(r.arc, ch, v, cs >= 0 ? STATES[cs] : 'healthy');
       if (r.bar) r.bar.style.width = v == null ? '0%' : `${(Math.max(0, Math.min(1, (v - ch.min) / (ch.max - ch.min))) * 100).toFixed(0)}%`;
     }
     const tr = r.k('true');

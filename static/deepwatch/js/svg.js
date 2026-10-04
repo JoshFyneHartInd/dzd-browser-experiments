@@ -42,54 +42,6 @@ export function bandIntervals(ch) {
   return out;
 }
 
-const DEG = Math.PI / 180;
-const polar = (cx, cy, r, deg) => [cx + r * Math.cos(deg * DEG), cy + r * Math.sin(deg * DEG)];
-function arcPath(cx, cy, r, t0, t1) {
-  const a0 = 135 + 270 * t0, a1 = 135 + 270 * t1;
-  const [x0, y0] = polar(cx, cy, r, a0), [x1, y1] = polar(cx, cy, r, a1);
-  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${(a1 - a0) > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
-}
-const DASH = { healthy: '', caution: '2 3', alert: '6 3', critical: '' };
-const WIDTH = { healthy: 3, caution: 4, alert: 5, critical: 7 };
-
-/** Arc gauge skeleton: threshold ring (dash style differs per state), value arc, marker. */
-export function arcGaugeHTML(ch, cls = '', { text = false } = {}) {
-  const segs = bandIntervals(ch).map((b) => {
-    const t0 = (b.a - ch.min) / (ch.max - ch.min), t1 = (b.b - ch.min) / (ch.max - ch.min);
-    return `<path d="${arcPath(50, 50, 44, t0, t1)}" class="ring ring-${b.state}" stroke-dasharray="${DASH[b.state]}" stroke-width="${WIDTH[b.state]}" fill="none"/>`;
-  }).join('');
-  return `<svg class="arc ${cls}" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-    <path d="${arcPath(50, 50, 33, 0, 1)}" class="arc-track" fill="none" stroke-width="7" stroke-linecap="round"/>
-    <path class="arc-value" d="" fill="none" stroke-width="7" stroke-linecap="round"/>
-    <circle class="arc-dot" r="4.6"/>
-    ${segs}
-    ${text ? '<text class="arc-num" x="50" y="53" text-anchor="middle" data-k="val">--</text><text class="arc-unit" x="50" y="68" text-anchor="middle" data-k="unit"></text>' : ''}
-  </svg>`;
-}
-/** Size the number and centre its digits on the ring centre (50,50); the unit hangs below, outside the centring. */
-export function setArcText(svg, num, unit, noSig) {
-  const n = svg.querySelector('.arc-num'), u = svg.querySelector('.arc-unit');
-  if (n.textContent !== num) n.textContent = num;
-  if (u.textContent !== unit) u.textContent = unit;
-  const len = num.length;
-  const size = noSig ? 9 : len <= 2 ? 24 : len === 3 ? 21 : len === 4 ? 18 : len === 5 ? 15 : 13;
-  const CAP = 0.72; // digit height as a fraction of font size (Inter)
-  const base = 50 + (size * CAP) / 2;
-  const usize = unit.length > 5 ? 7.5 : 9;
-  n.setAttribute('font-size', size); n.setAttribute('y', base.toFixed(2));
-  u.setAttribute('font-size', usize); u.setAttribute('y', (base + usize * 0.72 + 3.2).toFixed(2));
-  n.classList.toggle('nosig', !!noSig);
-}
-export function updateArc(svg, ch, value, state) {
-  const val = svg.querySelector('.arc-value'), dot = svg.querySelector('.arc-dot');
-  if (value == null) { val.setAttribute('d', ''); dot.setAttribute('cx', -10); return; }
-  const t = Math.min(1, Math.max(0, (value - ch.min) / (ch.max - ch.min)));
-  val.setAttribute('d', t < 0.004 ? '' : arcPath(50, 50, 33, 0, t));
-  const [x, y] = polar(50, 50, 33, 135 + 270 * t);
-  dot.setAttribute('cx', x.toFixed(2)); dot.setAttribute('cy', y.toFixed(2));
-  svg.setAttribute('data-state', state);
-}
-
 /* ---- Sparkline and trend chart ---- */
 
 function scaleFor(values, ch, pad = 0.12) {
