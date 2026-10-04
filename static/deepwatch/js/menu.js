@@ -25,9 +25,12 @@ export class Menu {
     p.innerHTML = `
       <div class="menu-head"><h2>Menu</h2><button class="btn icon-btn" data-k="close" aria-label="Close menu" title="Close">${ph('x')}</button></div>
       <section class="menu-sec"><h3>Theme</h3>
-        <label class="sr-only" for="theme-search">Search themes</label>
-        <div class="search">${ph('magnifying-glass')}<input id="theme-search" type="search" placeholder="Search themes" autocomplete="off" spellcheck="false"></div>
-        <div class="theme-list" data-k="list" role="listbox" aria-label="Themes"></div>
+        <button class="theme-current" type="button" data-k="current" aria-haspopup="listbox" aria-expanded="false" aria-controls="theme-drop"></button>
+        <div class="theme-drop" id="theme-drop" data-k="drop" hidden>
+          <label class="sr-only" for="theme-search">Search themes</label>
+          <div class="search">${ph('magnifying-glass')}<input id="theme-search" type="search" placeholder="Search themes" autocomplete="off" spellcheck="false"></div>
+          <div class="theme-list" data-k="list" role="listbox" aria-label="Themes"></div>
+        </div>
       </section>
       <section class="menu-sec"><h3>Sound</h3>
         <div class="menu-row"><label for="m-sound">Sound</label><button id="m-sound" class="switch" type="button" role="switch" aria-checked="${!s.muted}"><span class="switch-knob"></span><span class="switch-text">${s.muted ? 'OFF' : 'ON'}</span></button></div>
@@ -54,13 +57,20 @@ export class Menu {
     vol.oninput = () => { this.app.setAudio({ volume: +vol.value / 100 }); audio.tick(); };
     this.search = p.querySelector('#theme-search');
     this.list = q('list');
+    this.drop = q('drop');
+    this.current = q('current');
+    this.current.onclick = () => this.setPicker(this.drop.hidden);
+    // Escape folds the list first (and restores the saved theme) instead of closing the whole menu
+    p.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !this.drop.hidden) { e.preventDefault(); e.stopPropagation(); this.setPicker(false); this.current.focus(); }
+    });
+    this.renderCurrent();
     this.search.oninput = () => this.renderList();
     this.search.onkeydown = (e) => { if (e.key === 'ArrowDown') { e.preventDefault(); this.focusOption(0); } };
     this.list.addEventListener('mouseleave', () => this.restore());
     this.list.addEventListener('focusout', (e) => { if (!this.list.contains(e.relatedTarget)) this.restore(); });
-    this.renderList();
     if (this.anchor) this.anchor.setAttribute('aria-expanded', 'true');
-    (this.search).focus({ preventScroll: true });
+    this.current.focus({ preventScroll: true });
     this.outside = (e) => { if (this.panel && !this.panel.contains(e.target) && !(this.anchor && this.anchor.contains(e.target))) this.close(); };
     setTimeout(() => document.addEventListener('pointerdown', this.outside), 0);
   }
@@ -72,6 +82,28 @@ export class Menu {
     this.panel.remove();
     this.panel = null;
     if (this.anchor) { this.anchor.setAttribute('aria-expanded', 'false'); this.anchor.focus({ preventScroll: true }); }
+  }
+
+  /** The picker is folded by default so passing the mouse over it never previews a theme. */
+  setPicker(open) {
+    this.drop.hidden = !open;
+    this.current.setAttribute('aria-expanded', String(open));
+    if (open) {
+      this.search.value = '';
+      this.renderList();
+      const cur = this.list.querySelector('.theme-opt[aria-selected="true"]');
+      if (cur) cur.scrollIntoView({ block: 'center' });
+      this.search.focus({ preventScroll: true });
+    } else {
+      this.restore();
+      this.list.innerHTML = '';
+    }
+  }
+  renderCurrent() {
+    const t = getTheme(this.committed), k = t.tokens;
+    const sw = (c) => `<i style="background:${c}"></i>`;
+    this.current.innerHTML = `<span class="swatch" aria-hidden="true">${sw(k.bg)}${sw(k.surface)}${sw(k.accent)}${sw(k.healthy)}${sw(k.critical)}</span><span class="theme-name">${t.name}</span><span class="theme-caret" aria-hidden="true">${ph('caret-down')}</span>`;
+    this.current.setAttribute('aria-label', `Theme: ${t.name}. Change theme`);
   }
 
   renderList() {
@@ -121,6 +153,9 @@ export class Menu {
     applyTheme(id, { persist: true });
     this.app.onThemeChange && this.app.onThemeChange(id);
     audio.confirm();
+    this.renderCurrent();
+    this.setPicker(false);
+    this.current.focus();
     for (const o of this.options()) {
       const cur = o.dataset.id === id;
       o.setAttribute('aria-selected', String(cur));

@@ -342,6 +342,15 @@ button { cursor: pointer; }
 .search { display: flex; align-items: center; gap: 8px; padding: 0 10px; min-height: 44px; background: var(--surface2); border: var(--bw) solid var(--border); border-radius: 10px; margin-bottom: 8px; }
 .search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; min-height: 40px; }
 .search:focus-within { outline: var(--ring) solid var(--focus); outline-offset: 2px; }
+.theme-current { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 4px 12px; text-align: left; background: var(--surface2); border: var(--bw) solid var(--border); border-radius: 10px; }
+.theme-current:hover { border-color: var(--accent); }
+.theme-current[aria-expanded="true"] { border-color: var(--accent); }
+.theme-caret { display: inline-flex; transition: transform 0.15s; }
+.theme-current[aria-expanded="true"] .theme-caret { transform: rotate(180deg); }
+.theme-drop { margin-top: 8px; }
+.theme-drop[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .theme-caret { transition: none; } }
+.no-icons .theme-caret::after { content: '\25BE'; }
 .theme-list { max-height: 34vh; overflow: auto; border: var(--bw) solid var(--border); border-radius: 10px; }
 .group-title { position: sticky; top: 0; padding: 6px 12px; background: var(--surface2); color: var(--text2); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
 .theme-opt { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 4px 12px; text-align: left; background: transparent; border: 0; border-bottom: var(--bw) solid var(--border); }

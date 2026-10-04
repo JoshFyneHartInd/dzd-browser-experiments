@@ -242,6 +242,41 @@ await back();
   await back();
 }
 
+// ---- Theme picker: folded by default, so moving the mouse past it never previews a theme ----
+{
+  const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
+  const start = await theme();
+  await page.locator('#game-root [data-k="menu"]').click();
+  await page.waitForSelector('.menu-panel');
+  expect('theme list is folded when the menu opens', !(await page.locator('.theme-drop').isVisible()));
+  expect('no theme options are in the page while folded', (await page.locator('.theme-opt').count()) === 0);
+  const cb = await page.locator('.theme-current').boundingBox();
+  await page.mouse.move(cb.x + 20, cb.y + cb.height / 2, { steps: 5 });
+  await page.mouse.move(cb.x + 20, cb.y + cb.height + 120, { steps: 12 });
+  expect('moving the mouse past the picker changes nothing', (await theme()) === start);
+  expect('the folded picker names the current theme', (await page.locator('.theme-current .theme-name').textContent()).length > 0);
+  await page.locator('.theme-current').click();
+  expect('clicking it opens the list', await page.locator('.theme-drop').isVisible());
+  const other = page.locator('.theme-opt[aria-selected="false"]').nth(3);
+  const otherId = await other.getAttribute('data-id');
+  const pickedName = (await other.locator('.theme-name').textContent()).trim();
+  await other.hover();
+  expect('hovering an option still previews it while open', (await theme()) === otherId);
+  await page.mouse.move(cb.x + 20, cb.y - 40);
+  await page.locator('.theme-list').dispatchEvent('mouseleave');
+  expect('leaving the list restores the saved theme', (await theme()) === start);
+  await page.keyboard.press('Escape');
+  expect('Escape folds the list first', !(await page.locator('.theme-drop').isVisible()) && (await page.locator('.menu-panel').count()) === 1);
+  await page.locator('.theme-current').click();
+  await page.locator(`.theme-opt[data-id="${otherId}"]`).click();
+  expect('choosing a theme applies it', (await theme()) === otherId);
+  expect('choosing a theme folds the list', !(await page.locator('.theme-drop').isVisible()));
+  expect('the folded picker now shows the new theme', (await page.locator('.theme-current .theme-name').textContent()).trim() === pickedName, `(picked ${pickedName})`);
+  expect('the choice is saved', (await page.evaluate(() => localStorage.getItem('deepwatch.theme'))) === otherId);
+  await page.keyboard.press('Escape');
+  expect('Escape on a folded picker closes the menu', (await page.locator('.menu-panel').count()) === 0);
+}
+
 await browser.close();
 if (errors.length) { console.log(`${errors.length} FAILURE(S):`); errors.forEach((e) => console.log('  x ' + e)); process.exit(1); }
 console.log(`UI smoke test: opened ${ids.length} detail views with no errors.`);
