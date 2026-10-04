@@ -2,7 +2,7 @@
 import { CONFIG, STATES, STATE_META, SYSTEM_BY_ID, SENSOR_SYSTEMS } from './config.js';
 import { formatValue, stateIndex, setControl, controlPending, jobInfo, startJob } from './sim.js';
 import { h, setText, setAttr, setClass, ph, clockText } from './dom.js';
-import { stateIcon, arcGaugeHTML, updateArc, trendChart } from './svg.js';
+import { stateIcon, arcGaugeHTML, updateArc, setArcText, trendChart } from './svg.js';
 import { fmtClock } from './util.js';
 import * as audio from './audio.js';
 
@@ -77,11 +77,12 @@ function buildDetail(sd) {
   const readouts = h('div', { class: 'readouts' });
   for (const ch of sd.channels) {
     const card = h('div', { class: 'card', 'data-ch': ch.id });
-    const gauge = ch.text ? '' : ch.bands ? arcGaugeHTML(ch, 'card-arc') : `<div class="bar" aria-hidden="true"><i></i></div>`;
+    const round = !ch.text && ch.bands; // numeric channels with bands get the big centred-value gauge
+    const gauge = round ? arcGaugeHTML(ch, 'card-arc', { text: true }) : ch.text ? '' : `<div class="bar" aria-hidden="true"><i></i></div>`;
     card.innerHTML = `<div class="card-top"><span class="card-label">${ch.label}</span><span class="card-badge" data-k="badge"></span></div>
-      <div class="card-body ${ch.bands || ch.text ? '' : 'card-body-bar'}">${gauge}<div class="card-val"><span class="val" data-k="val">--</span><span class="unit" data-k="unit">${ch.unit || ''}</span></div></div>
+      <div class="card-body ${round ? 'card-body-gauge' : ch.text ? '' : 'card-body-bar'}">${gauge}${round ? '' : `<div class="card-val"><span class="val" data-k="val">--</span><span class="unit" data-k="unit">${ch.unit || ''}</span></div>`}</div>
       <div class="card-true" data-k="true" hidden></div>`;
-    dv.readouts[ch.id] = { ch, el: card, k: (k) => card.querySelector(`[data-k="${k}"]`), arc: card.querySelector('.arc'), bar: card.querySelector('.bar i'), last: '' };
+    dv.readouts[ch.id] = { ch, el: card, k: (k) => card.querySelector(`[data-k="${k}"]`), arc: card.querySelector('.arc'), round, bar: card.querySelector('.bar i'), last: '' };
     readouts.append(card);
   }
   const charts = h('div', { class: 'charts' });
@@ -302,9 +303,12 @@ function updateDetail(sim, force = false) {
     const sig = text + cs;
     if (r.last !== sig || force) {
       r.last = sig;
-      setText(r.k('val'), text);
-      setClass(r.k('val'), 'nosig', v == null);
-      setText(r.k('unit'), v == null || ch.text ? '' : ch.unit || '');
+      if (r.round) setArcText(r.arc, text, v == null ? '' : ch.unit || '', v == null);
+      else {
+        setText(r.k('val'), text);
+        setClass(r.k('val'), 'nosig', v == null);
+        setText(r.k('unit'), v == null || ch.text ? '' : ch.unit || '');
+      }
       const badge = r.k('badge');
       badge.innerHTML = ch.bands && cs >= 0 ? stateIcon(STATES[cs], 22) : '';
       r.el.dataset.state = ch.bands && cs >= 0 ? STATES[cs] : 'none';

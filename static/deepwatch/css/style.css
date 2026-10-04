@@ -188,7 +188,8 @@ button { cursor: pointer; }
 .card-label { color: var(--text2); font-size: 0.875rem; font-weight: 600; }
 .card-body { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
 .card-body-bar { flex-direction: column; align-items: flex-start; }
-.card-arc { width: 64px; height: 64px; flex: none; }
+.card-body-gauge { justify-content: center; margin-top: 0; }
+.card-arc { width: clamp(92px, 17vh, 128px); height: clamp(92px, 17vh, 128px); flex: none; overflow: visible; }
 .card-val { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
 .card-val .val { font-size: 2rem; font-weight: 700; line-height: 1; }
 .card-val .val.nosig { font-size: 1.1rem; color: var(--caution); }
