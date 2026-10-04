@@ -1,0 +1,10 @@
+{
+  "name": "deepwatch",
+  "version": "1.0.0",
+  "description": "Deepwatch: a calm browser game about tending a deep sea science station.",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node tests/sim.test.js && node tests/themes.test.js"
+  }
+}

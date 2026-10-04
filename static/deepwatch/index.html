@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en" data-theme="midnight">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deepwatch</title>
+  <meta name="description" content="A calm browser game about tending a deep sea science station.">
+
+  <!-- Apply the saved theme before first paint: keep the page hidden (on the saved background) until js/main.js has installed the token CSS. -->
+  <style>
+    html:not(.theme-ready) { visibility: hidden; }
+    noscript ~ * {}
+  </style>
+  <script>
+    (function () {
+      var d = document.documentElement;
+      try {
+        var id = localStorage.getItem('deepwatch.theme');
+        if (id) d.setAttribute('data-theme', id);
+        var bg = localStorage.getItem('deepwatch.themeBg');
+        d.style.background = bg || '#0b1220';
+      } catch (e) { d.style.background = '#0b1220'; }
+      // Failsafe: never leave the page hidden if the module fails to load
+      setTimeout(function () { d.classList.add('theme-ready'); }, 4000);
+    })();
+  </script>
+  <noscript><style>html:not(.theme-ready) { visibility: visible; }</style></noscript>
+
+  <!-- One font family for all text, with a system fallback stack so the game stays usable if it fails to load -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind (CDN) for utility classes; structural layout lives in css/style.css so the game still works without it -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor icon font (CDN) -->
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="size-gate" class="size-gate" role="alert" hidden>
+      <div>
+        <i class="ph ph-device-tablet-speaker" aria-hidden="true"></i>
+        <h1>Please use a larger screen in landscape</h1>
+        <p>Deepwatch needs a tablet or desktop display at least 1024 pixels wide, held in landscape.</p>
+      </div>
+    </div>
+    <main id="title-screen" class="title-screen" hidden></main>
+    <div id="game-root" hidden></div>
+    <main id="end-screen" class="end-screen" hidden></main>
+  </div>
+  <noscript><p style="padding:2rem;font-family:sans-serif">Deepwatch needs JavaScript.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
