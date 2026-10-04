@@ -104,7 +104,14 @@ function buildDetail(sd) {
   controls.append(h('h3', { text: 'Controls' }));
   const maint = sd.controls.find((c) => c.id === 'maint');
   if (sd.id === 'instruments') controls.append(this.buildSensorTable());
-  for (const spec of sd.controls) if (spec.id !== 'maint') controls.append(this.buildControl(sd, spec));
+  for (const spec of sd.controls) if (spec.id !== 'maint' && !spec.order) controls.append(this.buildControl(sd, spec));
+  const orders = sd.controls.filter((c) => c.order);
+  if (orders.length) { // supply orders: one button per item, in a grid, sharing one explanation
+    const grid = h('div', { class: 'order-grid' });
+    for (const spec of orders) grid.append(this.buildControl(sd, spec));
+    controls.append(h('h3', { class: 'sub', text: 'Resupply' }), grid,
+      h('p', { class: 'hint', text: 'Order one item at a time. Only one delivery can be on its way, and each takes a few minutes.' }));
+  }
   if (maint) controls.append(h('h3', { class: 'sub', text: 'Maintenance' }), this.buildControl(sd, maint)); // not every system has equipment to service
 
   const links = h('section', { class: 'links', 'aria-label': 'Linked systems' }, h('h3', { text: 'Linked systems' }));
@@ -160,9 +167,8 @@ function buildFader(sd, spec) {
   wrap.append(
     h('div', { class: 'ctl-head' }, lab, h('span', { class: 'ctl-vals' }, 'Set ', setEl, ' · Actual ', nowEl)),
     w.el, pend, h('p', { class: 'hint', id: id + '-h', text: spec.hint || '' }));
-  let lastTick = 0, start = this.sim.ctl[key].eff;
+  let lastTick = 0;
   w.onInput = (v) => {
-    start = ui.sim.ctl[key].eff;
     setControl(ui.sim, sd.id, spec.id, v);
     const now = performance.now();
     if (now - lastTick > 70) { lastTick = now; audio.tick(); }
@@ -181,11 +187,10 @@ function buildFader(sd, spec) {
       const p = controlPending(sim, sd.id, spec.id);
       pend.hidden = !p.pending;
       if (p.pending) {
-        const total = Math.max(1e-6, Math.abs(c.set - start));
-        const prog = Math.max(0, Math.min(1, 1 - Math.abs(c.set - c.eff) / Math.max(total, Math.abs(c.set - c.eff))));
         pend.querySelector('.pend-text').textContent = `Pending change: moving from ${fmtCtl(spec, c.eff)} toward ${fmtCtl(spec, c.set)}`;
-        pend.querySelector('.pbar i').style.width = `${(prog * 100).toFixed(0)}%`;
+        pend.querySelector('.pbar i').style.width = `${(p.progress * 100).toFixed(0)}%`;
       }
+      const start = p.from;
       const overshoot = c.eff > Math.max(c.set, start) + 0.5 * spec.step || c.eff < Math.min(c.set, start) - 0.5 * spec.step;
       setClass(wrap, 'overshooting', overshoot);
     },
@@ -236,7 +241,7 @@ function jobButtonState(btn, info, label) {
   else if (info.reason) { setText(sub, info.reason); bar.style.width = '0%'; }
   else { setText(sub, costText(info.spec)); bar.style.width = '0%'; }
 }
-const costText = (spec) => (spec.cost && spec.cost.spares ? `Uses ${spec.cost.spares} spare` : 'Ready');
+const costText = (spec) => (spec.order ? `Delivers +${CONFIG.model.cons.resupply[spec.order]}${spec.order === 'fuel' ? '%' : ' units'}` : spec.cost && spec.cost.spares ? `Uses ${spec.cost.spares} spare` : 'Ready');
 
 /** opts.arm: a two-step button. The first press arms it for a few seconds, the second press starts the job. */
 function jobButton(ui, key, label, onDone, opts = {}) {

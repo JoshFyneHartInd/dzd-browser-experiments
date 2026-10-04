@@ -294,6 +294,9 @@ button { cursor: pointer; }
 .job { position: relative; overflow: hidden; width: 100%; flex-direction: column; gap: 0; padding: 6px 14px; min-height: 52px; align-items: flex-start; justify-content: center; text-align: left; }
 .job-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--accent); opacity: 0.28; }
 .job-label, .job-sub { position: relative; }
+.order-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.order-grid .ctl { margin-bottom: 0; }
+.order-grid .hint:empty { display: none; }
 .job-sub { font-size: 0.78rem; color: var(--text2); font-weight: 500; }
 .job[aria-disabled="true"] { cursor: not-allowed; color: var(--text2); border-style: dashed; }
 .job.small { min-height: 44px; width: auto; padding: 4px 10px; font-size: 0.8125rem; align-items: center; text-align: center; }

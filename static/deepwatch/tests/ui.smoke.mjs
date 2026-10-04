@@ -86,6 +86,107 @@ await cyc.click();
 expect('second press starts the job', await busy());
 await back();
 
+
+// ---- Leaving a screen must not lose a pending change: the progress bar must read the same after coming back ----
+// Mirrors a player's steps: open the screen, make the change, watch the bar move, leave, return.
+{
+  const targets = await page.evaluate(async () => {
+    const { CONFIG } = await import('/js/config.js');
+    return CONFIG.systems.filter((sd) => sd.id !== 'instruments').flatMap((sd) => sd.controls.map((c) => [sd.id, c.id, c.type]));
+  });
+  const barOf = async (ctl) => {
+    const bar = page.locator(`.ctl[data-ctl="${ctl}"] .pbar i, .ctl[data-ctl="${ctl}"] .job-bar`).first();
+    if (!(await bar.count())) return -1; // screen is gone (for example the station was lost while fast-forwarding)
+    return parseFloat(await bar.evaluate((el) => el.style.width || '0')) || 0;
+  };
+  const openScreen = async (sys) => { await page.locator(`.tile[data-sys="${sys}"]`).click({ timeout: 5000 }); await page.waitForSelector('.detail .detail-grid', { timeout: 5000 }); await page.waitForTimeout(250); };
+  let checked = 0;
+  for (const [sys, ctl, type] of targets) {
+    await openScreen(sys);
+    const started = await page.evaluate(async ([sys, ctl, type]) => {
+      const m = await import('/js/sim.js'), { SYSTEM_BY_ID } = await import('/js/config.js'), sim = window.deepwatch.sim;
+      const spec = SYSTEM_BY_ID[sys].controls.find((c) => c.id === ctl);
+      if (type === 'fader') return m.setControl(sim, sys, ctl, sim.ctl[`${sys}.${ctl}`].set < (spec.min + spec.max) / 2 ? spec.max : spec.min);
+      if (type === 'toggle') return m.setControl(sim, sys, ctl, sim.ctl[`${sys}.${ctl}`].set ? 0 : 1);
+      return m.startJob(sim, `${sys}.${ctl}`);
+    }, [sys, ctl, type]);
+    if (!started) { await page.locator('[data-k="back"]').click(); continue; }
+    // Advance in short bursts until the bar shows real progress (slow controls take longer), then freeze time so only the screen can change what we read.
+    for (let i = 0; i < 12; i++) {
+      await page.evaluate(() => { window.deepwatch.speed = 10; });
+      await page.waitForTimeout(250);
+      await page.evaluate(() => { window.deepwatch.speed = 0.0001; });
+      await page.waitForTimeout(220);
+      if ((await barOf(ctl)) >= 5) break;
+    }
+    const before = await barOf(ctl);
+    if (before < 0) { errors.push(`bar persistence: ${sys}.${ctl} screen disappeared (station lost?)`); break; }
+    if (before < 0.5) errors.push(`bar persistence: ${sys}.${ctl} (${type}) showed no progress to compare (${before}%), so the check would be meaningless`);
+    await page.locator('[data-k="back"]').click();
+    await page.waitForTimeout(150);
+    await openScreen(sys);
+    const after = await barOf(ctl);
+    if (Math.abs(after - before) > 4) errors.push(`pending bar for ${sys}.${ctl} (${type}) was ${before}% then ${after}% after leaving and returning`);
+    await page.locator('[data-k="back"]').click();
+    checked++;
+  }
+  await page.evaluate(() => { window.deepwatch.speed = 1; });
+  console.log(`  checked ${checked} controls for bar persistence`);
+}
+
+
+// ---- The two reported cases, driven through the real controls (click / keyboard), not the sim API ----
+{
+  const barNow = async (ctl) => parseFloat(await page.locator(`.ctl[data-ctl="${ctl}"] .pbar i`).evaluate((el) => el.style.width || '0')) || 0;
+  const burst = async (ctl) => {
+    for (let i = 0; i < 12; i++) {
+      await page.evaluate(() => { window.deepwatch.speed = 10; }); await page.waitForTimeout(250);
+      await page.evaluate(() => { window.deepwatch.speed = 0.0001; }); await page.waitForTimeout(220);
+      if ((await barNow(ctl)) >= 5) break;
+    }
+  };
+  const roundTrip = async (sys, ctl, act) => {
+    await page.evaluate(() => { window.deepwatch.speed = 1; });
+    await page.locator(`.tile[data-sys="${sys}"]`).click({ timeout: 5000 }); await page.waitForSelector('.detail .detail-grid'); await page.waitForTimeout(250);
+    await act(); await burst(ctl);
+    const before = await barNow(ctl);
+    await page.locator('[data-k="back"]').click(); await page.waitForTimeout(150);
+    await page.locator(`.tile[data-sys="${sys}"]`).click(); await page.waitForSelector('.detail .detail-grid'); await page.waitForTimeout(250);
+    const after = await barNow(ctl);
+    if (before < 5) errors.push(`real-control bar check for ${sys}.${ctl}: no progress shown (${before}%)`);
+    if (Math.abs(after - before) > 4) errors.push(`real-control bar check for ${sys}.${ctl}: ${before}% before leaving, ${after}% after returning`);
+    await page.locator('[data-k="back"]').click();
+  };
+  await roundTrip('hull', 'pump', async () => { await page.locator('.ctl[data-ctl="pump"] .step', { hasText: 'High' }).click(); });
+  await roundTrip('comms', 'gain', async () => { const r = page.locator('.ctl[data-ctl="gain"] input'); await r.focus(); await page.keyboard.press('End'); });
+  await page.evaluate(() => { window.deepwatch.speed = 1; });
+}
+
+
+// ---- Supply orders: one button per item, only one delivery at a time ----
+{
+  await page.evaluate(() => { // clear orders left in flight by the checks above
+    const sim = window.deepwatch.sim;
+    for (const k in sim.jobs) if (k.startsWith('consumables.order')) Object.assign(sim.jobs[k], { active: false, cdUntil: 0 });
+    sim.v.fuel.level = Math.min(sim.v.fuel.level, 60); window.deepwatch.speed = 1;
+  });
+  await page.locator('.tile[data-sys="consumables"]').click(); await page.waitForSelector('.detail .detail-grid'); await page.waitForTimeout(300);
+  const btn = (c) => page.locator(`.ctl[data-ctl="${c}"] button.job`);
+  const sub = (c) => btn(c).locator('.job-sub').textContent();
+  for (const [c, text] of [['orderFood', 'Order food'], ['orderFilters', 'Order filters'], ['orderSpares', 'Order spares'], ['orderFuel', 'Order fuel']]) {
+    expect(`${c} has its own button`, (await btn(c).count()) === 1 && (await btn(c).locator('.job-label').textContent()) === text);
+  }
+  expect('idle order button says what it delivers', /Delivers \+40/.test(await sub('orderFuel')) || /Delivers \+/.test(await sub('orderFuel')), await sub('orderFuel'));
+  await btn('orderFuel').click();
+  await page.waitForTimeout(350);
+  expect('ordering fuel starts only the fuel delivery', await page.evaluate(() => window.deepwatch.sim.jobs['consumables.orderFuel'].active && !window.deepwatch.sim.jobs['consumables.orderFood'].active));
+  expect('other order buttons are blocked while one is on its way', (await btn('orderFood').getAttribute('aria-disabled')) === 'true' && /Another delivery/.test(await sub('orderFood')), await sub('orderFood'));
+  await btn('orderFood').click({ force: true });
+  expect('clicking a blocked order does nothing', await page.evaluate(() => !window.deepwatch.sim.jobs['consumables.orderFood'].active));
+  await page.screenshot({ path: process.env.DEEPWATCH_SHOT || '/tmp/supplies-orders.png' });
+  await back();
+}
+
 await browser.close();
 if (errors.length) { console.log(`${errors.length} FAILURE(S):`); errors.forEach((e) => console.log('  x ' + e)); process.exit(1); }
 console.log(`UI smoke test: opened ${ids.length} detail views with no errors.`);

@@ -48,7 +48,7 @@ export function createSim({ difficulty = 'standard', seed = (Date.now() >>> 0) }
     for (const c of s.controls) {
       const key = `${s.id}.${c.id}`;
       if (c.type === 'job') sim.jobs[key] = { active: false, start: 0, end: 0, cdUntil: 0 };
-      else sim.ctl[key] = { set: c.def, eff: c.def, vel: 0, zeta: 1 };
+      else sim.ctl[key] = { set: c.def, eff: c.def, vel: 0, zeta: 1, from: c.def };
     }
   }
   for (const id of SENSOR_SYSTEMS) {
@@ -78,6 +78,7 @@ export function setControl(sim, sysId, ctlId, value, { log = false } = {}) {
   let val = clamp(Math.round(value / spec.step) * spec.step, spec.min, spec.max);
   const frac = Math.abs(val - c.eff) / (spec.max - spec.min);
   c.zeta = lerp(1, 0.35, clamp((frac - 0.1) / 0.3, 0, 1)); // small moves glide, big moves overshoot
+  c.from = c.eff; // where this move started: the pending bar and overshoot marker measure from here (kept in the sim so leaving the screen cannot lose it)
   c.set = val;
   if (log) pushLog(sim, sysId, 'player', 0, `You: ${spec.label} set to ${val}${spec.unit || ''}.`);
   return true;
@@ -89,7 +90,9 @@ export function controlPending(sim, sysId, ctlId) {
   if (!c) return { pending: false, progress: 1 };
   const range = spec.type === 'toggle' ? 1 : spec.max - spec.min;
   const err = Math.abs(c.set - c.eff);
-  return { pending: err > Math.max(0.004 * range, 0.2 * (spec.step || 0.05)) || Math.abs(c.vel) > 0.03, err: err / range };
+  const from = c.from ?? c.eff; // older saves have no start point: treat the move as starting now
+  const total = Math.max(Math.abs(c.set - from), err, 1e-6);
+  return { pending: err > Math.max(0.004 * range, 0.2 * (spec.step || 0.05)) || Math.abs(c.vel) > 0.03, err: err / range, from, progress: Math.max(0, Math.min(1, 1 - err / total)) };
 }
 
 function stepControls(sim, dt) {
@@ -124,13 +127,22 @@ export function crewFactor(sim) {
   return C.crewBase + C.crewRation * (sim.ctl['consumables.ration'].eff / 100);
 }
 
+/** Supply orders: one job per item, but only one delivery may be on its way at a time. */
+const stockOf = (sim, item) => (item === 'fuel' ? sim.v.fuel.level : sim.v.consumables[item]);
+const stockMax = (item) => (item === 'fuel' ? 100 : channelOf('consumables', item).max);
+export function orderInFlight(sim) {
+  return Object.keys(sim.jobs).some((k) => k.startsWith('consumables.order') && sim.jobs[k].active);
+}
+
 export function jobInfo(sim, key) {
   const j = sim.jobs[key], spec = jobSpec(key);
   const cooling = !j.active && sim.t < j.cdUntil;
   let reason = '';
   if (sim.over) reason = 'Station lost';
   else if (j.active) reason = 'In progress';
+  else if (spec.order && orderInFlight(sim)) reason = 'Another delivery is on its way';
   else if (cooling) reason = 'Cooling down';
+  else if (spec.order && stockOf(sim, spec.order) >= stockMax(spec.order)) reason = 'Stock full';
   else if (spec.cost && spec.cost.spares && sim.v.consumables.spares < spec.cost.spares) reason = 'No spares';
   return {
     key, spec, active: j.active, cooling, canStart: reason === '', reason,
@@ -148,7 +160,7 @@ export function startJob(sim, key, { log = true } = {}) {
   if (spec.cost && spec.cost.spares) sim.v.consumables.spares -= spec.cost.spares;
   let dur = spec.dur;
   if (key === 'hull.patch') dur = spec.dur / crewFactor(sim);
-  if (key === 'consumables.order') dur = spec.dur + sim.mods.supplyDelay;
+  if (spec.order) dur = spec.dur + sim.mods.supplyDelay;
   j.active = true; j.start = sim.t; j.end = sim.t + dur;
   if (log) pushLog(sim, sys, 'player', 0, `You: ${spec.label}${arg ? ' (' + SYSTEM_BY_ID[arg].name + ')' : ''}.`);
   return true;
@@ -179,12 +191,12 @@ function jobDone(sim, key) {
   } else if (key === 'airlock.equalize') {
     sim.ou['airlock.dp'] = 0;
     pushLog(sim, 'airlock', 'player', 0, 'Airlock equalized.');
-  } else if (key === 'consumables.order') {
-    const R = CONFIG.model.cons.resupply, c = sim.v.consumables;
-    for (const k of ['food', 'filters', 'spares']) c[k] = Math.min(channelOf('consumables', k).max, c[k] + R[k]);
-    sim.v.fuel.level = Math.min(100, sim.v.fuel.level + R.fuel);
+  } else if (spec.order) {
+    const item = spec.order, amt = CONFIG.model.cons.resupply[item];
+    if (item === 'fuel') sim.v.fuel.level = Math.min(100, sim.v.fuel.level + amt);
+    else sim.v.consumables[item] = Math.min(stockMax(item), sim.v.consumables[item] + amt);
     sim.lastDelivery = sim.t;
-    pushLog(sim, 'consumables', 'event', 0, 'Supply: delivery arrived (food, filters, spares, fuel).');
+    pushLog(sim, 'consumables', 'event', 0, `Supply: ${item} delivery arrived.`);
   } else if (id === 'recal') {
     const s = sim.sensors[arg];
     s.bias = 0; s.offsets = {};
@@ -504,6 +516,13 @@ export function restoreSim(obj) {
   for (const ev of sim.events) if (ev.esc == null) ev.esc = Infinity;
   if (sim.nextEventAt == null) sim.nextEventAt = Infinity;
   if (sim.nextCrisisAt == null) sim.nextCrisisAt = Infinity;
+  // Older saves: add any control or job that did not exist yet (for example the per-item supply orders), drop the retired one.
+  delete sim.jobs['consumables.order'];
+  for (const sd of CONFIG.systems) for (const c of sd.controls) {
+    const key = `${sd.id}.${c.id}`;
+    if (c.type === 'job') sim.jobs[key] ??= { active: false, start: 0, end: 0, cdUntil: 0 };
+    else sim.ctl[key] ??= { set: c.def, eff: c.def, vel: 0, zeta: 1, from: c.def };
+  }
   sim.mods = freshMods();
   sim.paused = false;
   return sim;

@@ -30,6 +30,8 @@ const ctl = {
   toggle: (id, label, o) => ({ id, label, type: 'toggle', lag: 20, def: 0, ...o }),
   job: (id, label, o) => ({ id, label, type: 'job', ...o }),
 };
+// Supply orders: one job per item. Only one delivery can be on its way at a time; the cooldown only stops re-ordering the same item.
+const ORDER = { dur: 240, cd: 60 };
 const maint = ctl.job('maint', 'Maintenance', {
   dur: 90, cd: 60, cost: { spares: 1 },
   hint: 'Service this system. Uses 1 spare, lowers wear and clears equipment faults.',
@@ -103,7 +105,7 @@ export const CONFIG = {
     airlock: { pressureCoupling: 0.8, cycleSpike: 4, cycleSeal: 5, sealDmgStart: 3, sealDmg: 0.004, sealBase: 0.003, sealWear: 0.01 },
     waste: { prod: 0.02, procGain: 0.04, ventRate: 0.08, wearLoss: 0.3 },
     cons: { foodPerSec: 1 / 60, filterPerSec: 1 / 360, scrubRef: 55, crewBase: 0.6, crewRation: 0.4,
-      resupply: { food: 40, filters: 8, spares: 4, fuel: 40 }, orderDur: 240, orderCd: 300 },
+      resupply: { food: 40, filters: 8, spares: 4, fuel: 40 }, orderDur: ORDER.dur, orderCd: ORDER.cd },
   },
 
   // Slow random walks (OU): sd in channel units, tau in seconds
@@ -231,7 +233,10 @@ export const CONFIG = {
         { id: 'spares', label: 'Spares', unit: 'units', min: 0, max: 12, dec: 0, init: 6, bands: { ok: [4, INF], caution: [2, INF], alert: [1, INF] }, meter: 'ring' },
       ],
       controls: [
-        ctl.job('order', 'Order resupply', { dur: 240, cd: 300, hint: 'Delivers food, filters, spares and fuel after a delay.' }),
+        ctl.job('orderFood', 'Order food', { order: 'food', ...ORDER }),
+        ctl.job('orderFilters', 'Order filters', { order: 'filters', ...ORDER }),
+        ctl.job('orderSpares', 'Order spares', { order: 'spares', ...ORDER }),
+        ctl.job('orderFuel', 'Order fuel', { order: 'fuel', ...ORDER }),
         ctl.fader('ration', 'Ration level', { ui: 'steps', stops: [{ v: 50, label: 'Strict' }, { v: 75, label: 'Lean' }, { v: 100, label: 'Full' }], min: 50, max: 100, step: 5, def: 100, lag: 30, hint: 'Lower rations stretch food and water, but slow the patch crew.' }),
       ],
       links: [['fuel', 'level'], ['air', 'co2'], ['water', 'level']] },

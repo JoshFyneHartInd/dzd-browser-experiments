@@ -212,11 +212,67 @@ test('a resupply order delivers after a delay and a supply event lengthens it', 
   forceEvent(sim, 'supply');
   const food = sim.v.consumables.food;
   run(sim, 2);
-  startJob(sim, 'consumables.order');
-  const dur = sim.jobs['consumables.order'].end - sim.jobs['consumables.order'].start;
+  startJob(sim, 'consumables.orderFood');
+  const dur = sim.jobs['consumables.orderFood'].end - sim.jobs['consumables.orderFood'].start;
   ok(dur >= CONFIG.model.cons.orderDur + CONFIG.events.supplyExtra - 1, `delay includes the event (${dur})`);
   run(sim, dur + 5);
   ok(sim.v.consumables.food > food + 20, 'food delivered');
+});
+test('each item can be ordered on its own and delivers only that item', () => {
+  const make = () => { const sim = quiet(3); sim.v.consumables.food = 40; sim.v.consumables.filters = 6; sim.v.consumables.spares = 4; sim.v.fuel.level = 40; return sim; };
+  const read = (s) => ({ Food: s.v.consumables.food, Filters: s.v.consumables.filters, Spares: s.v.consumables.spares, Fuel: s.v.fuel.level });
+  const base = make(); run(base, CONFIG.model.cons.orderDur + 5); // same time passing, nothing ordered
+  for (const item of ['Food', 'Filters', 'Spares', 'Fuel']) {
+    const sim = make();
+    ok(startJob(sim, `consumables.order${item}`), `order ${item} starts`);
+    run(sim, CONFIG.model.cons.orderDur + 5);
+    const got = read(sim), ref = read(base);
+    const extra = Object.keys(got).filter((k) => got[k] - ref[k] > 0.5);
+    ok(extra.length === 1 && extra[0] === item, `ordering ${item} should add only ${item}, but added: ${extra.join(', ') || 'nothing'}`);
+  }
+});
+test('only one delivery can be on its way at a time', () => {
+  const sim = quiet(4);
+  sim.v.consumables.food = 40; sim.v.fuel.level = 40;
+  ok(startJob(sim, 'consumables.orderFood'), 'first order starts');
+  ok(!startJob(sim, 'consumables.orderFuel'), 'a second order is refused while the first is active');
+  ok(jobInfo(sim, 'consumables.orderFuel').reason === 'Another delivery is on its way', jobInfo(sim, 'consumables.orderFuel').reason);
+  run(sim, CONFIG.model.cons.orderDur + 2);
+  ok(startJob(sim, 'consumables.orderFuel'), 'a different item can be ordered right after the first arrives');
+});
+test('the cooldown is short and only blocks re-ordering the same item', () => {
+  ok(CONFIG.model.cons.orderCd <= 90, `cooldown should be short, is ${CONFIG.model.cons.orderCd}s`);
+  const sim = quiet(4);
+  sim.v.consumables.food = 20; sim.v.fuel.level = 20;
+  startJob(sim, 'consumables.orderFood');
+  run(sim, CONFIG.model.cons.orderDur + 2);
+  ok(jobInfo(sim, 'consumables.orderFood').reason === 'Cooling down', 'same item cools down');
+  ok(jobInfo(sim, 'consumables.orderFuel').canStart, 'other items are ready straight away');
+  run(sim, CONFIG.model.cons.orderCd + 2);
+  ok(jobInfo(sim, 'consumables.orderFood').canStart, 'same item is available again after the cooldown');
+});
+test('ordering an item that is already full is refused', () => {
+  const sim = quiet(4);
+  sim.v.fuel.level = 100;
+  ok(!startJob(sim, 'consumables.orderFuel') && jobInfo(sim, 'consumables.orderFuel').reason === 'Stock full', 'full tank');
+});
+test('a supply-tender delay extends whichever order is on its way', () => {
+  const sim = quiet(6);
+  sim.v.consumables.filters = 6;
+  startJob(sim, 'consumables.orderFilters');
+  const end = sim.jobs['consumables.orderFilters'].end;
+  forceEvent(sim, 'supply');
+  ok(sim.jobs['consumables.orderFilters'].end >= end + CONFIG.events.supplyExtra - 1, 'ETA extended');
+});
+test('a save from before per-item orders still loads, with the new order jobs ready', () => {
+  const a = quiet(2);
+  const s = JSON.parse(JSON.stringify(serializeSim(a)));
+  for (const k of Object.keys(s.jobs)) if (k.startsWith('consumables.order')) delete s.jobs[k];
+  s.jobs['consumables.order'] = { active: false, start: 0, end: 0, cdUntil: 0 };
+  const b = restoreSim(s);
+  ok(b && !b.jobs['consumables.order'], 'old order job dropped');
+  ok(jobInfo(b, 'consumables.orderFood').canStart, 'new order jobs exist and are ready');
+  run(b, 5);
 });
 
 console.log('Lose condition');
@@ -373,6 +429,25 @@ test('a save round-trips through JSON and resumes identically', () => {
   run(a, 300); run(b, 300);
   ok(JSON.stringify(a.v) === JSON.stringify(b.v), 'same state after resuming');
   ok(a.log.length === b.log.length, 'same log');
+});
+test('pending progress is kept in the sim, so it survives a save and reload', () => {
+  const a = quiet(5);
+  setControl(a, 'hull', 'pump', 100); // 20 -> 100
+  run(a, 4);
+  const p1 = controlPending(a, 'hull', 'pump');
+  ok(p1.pending && p1.progress > 0.05 && p1.progress < 0.95, `mid-move progress should be partway, got ${p1.progress}`);
+  const b = restoreSim(JSON.parse(JSON.stringify(serializeSim(a))));
+  near(controlPending(b, 'hull', 'pump').progress, p1.progress, 1e-9, 'progress after reload');
+  run(b, 2);
+  ok(controlPending(b, 'hull', 'pump').progress > p1.progress, 'progress keeps rising after reload');
+});
+test('a save from before progress was tracked still loads and shows a sane progress', () => {
+  const a = quiet(5);
+  setControl(a, 'hull', 'pump', 100); run(a, 10);
+  const s = JSON.parse(JSON.stringify(serializeSim(a)));
+  for (const k in s.ctl) delete s.ctl[k].from;
+  const p = controlPending(restoreSim(s), 'hull', 'pump');
+  ok(p.progress >= 0 && p.progress <= 1, `progress ${p.progress}`);
 });
 test('an incompatible save version is discarded', () => {
   const a = createSim({ seed: 1 });

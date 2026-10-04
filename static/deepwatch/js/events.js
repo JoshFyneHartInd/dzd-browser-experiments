@@ -210,8 +210,7 @@ const DEFS = {
       ev.system = 'consumables';
       ev.title = 'Supply tender delayed';
       ev.cause = 'Supply tender delayed';
-      const job = sim.jobs['consumables.order'];
-      if (job && job.active) job.end += ev.p.extra;
+      for (const k in sim.jobs) if (k.startsWith('consumables.order') && sim.jobs[k].active) sim.jobs[k].end += ev.p.extra;
       pushLog(sim, 'consumables', 'event', 1, 'Supply: tender delayed. Resupply ETAs extended.');
       return true;
     },
