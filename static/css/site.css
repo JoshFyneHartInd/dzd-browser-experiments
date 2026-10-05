@@ -113,7 +113,7 @@ h2 {
   background: var(--purple);
   border-color: #9b72cf;
   outline: 2px solid var(--pink);
-  outline-offset: 2px;
+  /* outline-offset: 2px; */
 }
 
 .experiment-list a:active {
