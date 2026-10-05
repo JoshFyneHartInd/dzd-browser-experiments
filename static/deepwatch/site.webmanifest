@@ -30,6 +30,12 @@
       "type": "image/png",
       "form_factor": "wide",
       "label": "Deepwatch Title"
+    },
+    {
+      "src": "web-preview-portrait.png",
+      "sizes": "800x1200",
+      "type": "image/png",
+      "label": "Deepwatch Title"
     }
-]
+  ]
 }
