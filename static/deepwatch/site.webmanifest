@@ -1,6 +1,9 @@
 {
   "name": "Deepwatch",
   "short_name": "Deepwatch",
+  "description": "A calm background game about tending a deep sea science station.",
+  "id": "/",
+  "lang": "en-US",
   "start_url": "/",
   "icons": [
     {
