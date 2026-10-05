@@ -112,10 +112,9 @@ h2 {
   position: absolute;
   top: 0.45rem;
   right: 0.55rem;
-  color: var(--navy);
-  font-size: 0.88rem;
+  color: #0000ee;
+  font-size: 1.35rem;
   line-height: 1;
-  opacity: 0.9;
   pointer-events: none;
 }
 
