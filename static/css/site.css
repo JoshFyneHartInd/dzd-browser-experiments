@@ -12,7 +12,6 @@
 }
 
 body {
-  min-height: 100vh;
   margin: 0;
   color: var(--navy);
   font-family: Verdana, Geneva, sans-serif;
