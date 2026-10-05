@@ -34,7 +34,7 @@ url = '/pixelzip/'
 description = 'Optimize images for the web and beyond'
 
 [[links]]
-title = 'Modern Visual Subnet Calculator'
+title = 'Visual Subnet Calculator'
 url = '/visual-subnet-calc/'
 description = 'Calculate subnets visually'
 
