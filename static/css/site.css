@@ -24,7 +24,7 @@ body {
 
 .page-shell {
   width: min(100% - 2rem, 780px);
-  margin: 1rem auto;
+  margin: .75rem auto;
   padding: 0.8rem;
   background: var(--paper);
   border: 5px ridge #fff;
