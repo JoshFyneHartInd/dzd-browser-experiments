@@ -6,6 +6,7 @@
     <meta name="description" content="{{ site.Params.description | default .Description }}">
     <title>{{ site.Title }}</title>
     {{ template "_internal/google_analytics.html" . }}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/all.min.css">
     <link rel="stylesheet" href="{{ "css/site.css" | relURL }}">
   </head>
   <body>
@@ -23,6 +24,17 @@
             {{ range .Params.links }}
               <li>
                 <a href="{{ .url }}" target="_blank" rel="noopener noreferrer">
+                  {{ $icon := "fa-flask" }}
+                  {{ if eq .type "game" }}
+                    {{ $icon = "fa-gamepad" }}
+                  {{ else if eq .type "tool" }}
+                    {{ $icon = "fa-screwdriver-wrench" }}
+                  {{ else if eq .type "toy" }}
+                    {{ $icon = "fa-cubes" }}
+                  {{ end }}
+                  <span class="card-type-icon" aria-hidden="true">
+                    <i class="fa-solid {{ $icon }}"></i>
+                  </span>
                   <span class="experiment-title">{{ .title }}</span>
                   <span class="experiment-description">{{ .description }}</span>
                 </a>

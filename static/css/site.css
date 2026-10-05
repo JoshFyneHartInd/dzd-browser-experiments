@@ -98,13 +98,25 @@ h2 {
 .experiment-list a {
   display: grid;
   gap: 0.3rem;
-  padding: 0.7rem 0.85rem;
+  padding: 0.7rem 2.1rem 0.7rem 0.85rem;
   width: 100%;
   height: 100%;
   color: #0000ee;
   text-decoration: none;
   background: #e8ffff;
   border: 3px outset #b4e5e5;
+  position: relative;
+}
+
+.card-type-icon {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.55rem;
+  color: var(--navy);
+  font-size: 0.88rem;
+  line-height: 1;
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 .experiment-list a:hover,
@@ -114,6 +126,11 @@ h2 {
   border-color: #9b72cf;
   outline: 2px solid var(--pink);
   /* outline-offset: 2px; */
+}
+
+.experiment-list a:hover .card-type-icon,
+.experiment-list a:focus-visible .card-type-icon {
+  color: var(--yellow);
 }
 
 .experiment-list a:active {
