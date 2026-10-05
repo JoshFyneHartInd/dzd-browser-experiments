@@ -14,6 +14,11 @@ url = '/lockprot/'
 description = 'Crack the code before you get locked out'
 
 [[links]]
+title = 'Deepwatch'
+url = '/deepwatch/'
+description = 'A calm background game about tending a deep sea science station.'
+
+[[links]]
 title = 'Bleepr'
 url = '/bleepr/'
 description = 'Compose retro ringtones'
