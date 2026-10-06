@@ -379,7 +379,7 @@
       $('formatHint').textContent = 'Best for photos. Transparency is flattened.';
       $('qualityHint').textContent = settings.quality >= 100 ? 'Highest quality JPEG. Files may still be larger than WebP.' : '70 to 85 is a good range for photos.';
     } else {
-      $('formatHint').textContent = 'Best for logos, icons and screenshots. Photos stay large as PNG.';
+      $('formatHint').textContent = 'Best for logos, icons and screenshots. Keeps transparency.';
       $('qualityHint').textContent = settings.quality >= 100
         ? 'Lossless: all colors kept.'
         : 'Reduced to about ' + pngColors(settings.quality) + ' colors.';
