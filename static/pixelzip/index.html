@@ -211,18 +211,7 @@
       </div>
       <p id="formatHint" class="mt-2 text-sm text-muted"></p>
 
-      <div id="jpgBgWrap" class="mt-3 hidden">
-        <div class="flex items-baseline justify-between">
-          <label for="jpgBg" class="text-sm font-medium">Transparency fill color</label>
-          <output id="jpgBgOut" for="jpgBg" class="text-sm tabular-nums text-muted">#FFFFFF</output>
-        </div>
-        <div class="mt-2 flex items-center gap-2">
-          <input id="jpgBg" type="color" value="#ffffff"
-            class="h-10 w-14 cursor-pointer rounded border border-line bg-bg p-1">
-          <button id="jpgBgWhite" type="button" data-color="#ffffff" class="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:border-accent hover:text-ink">White</button>
-          <button id="jpgBgBlack" type="button" data-color="#000000" class="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:border-accent hover:text-ink">Black</button>
-        </div>
-      </div>
+      
     </fieldset>
 
     <div class="mt-5">
@@ -232,6 +221,18 @@
       </div>
       <input id="quality" type="range" min="10" max="100" step="1" value="80" class="mt-2 w-full">
       <p id="qualityHint" class="mt-1 text-sm text-muted"></p>
+    </div>
+    <div id="jpgBgWrap" class="mt-3 hidden">
+      <div class="flex items-baseline justify-between">
+        <label for="jpgBg" class="text-sm font-medium">Transparency fill color</label>
+        <output id="jpgBgOut" for="jpgBg" class="text-sm tabular-nums text-muted">#FFFFFF</output>
+      </div>
+      <div class="mt-2 flex items-center gap-2">
+        <input id="jpgBg" type="color" value="#ffffff"
+          class="h-10 w-14 cursor-pointer rounded border border-line bg-bg p-1">
+        <button id="jpgBgWhite" type="button" data-color="#ffffff" class="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:border-accent hover:text-ink">White</button>
+        <button id="jpgBgBlack" type="button" data-color="#000000" class="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:border-accent hover:text-ink">Black</button>
+      </div>
     </div>
 
     <fieldset class="mt-5">
