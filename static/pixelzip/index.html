@@ -213,7 +213,7 @@
 
       <div id="jpgBgWrap" class="mt-3 hidden">
         <div class="flex items-baseline justify-between">
-          <label for="jpgBg" class="text-sm font-medium">JPEG transparent background</label>
+          <label for="jpgBg" class="text-sm font-medium">Transparency fill color</label>
           <output id="jpgBgOut" for="jpgBg" class="text-sm tabular-nums text-muted">#FFFFFF</output>
         </div>
         <div class="mt-2 flex items-center gap-2">
@@ -221,9 +221,7 @@
             class="h-10 w-14 cursor-pointer rounded border border-line bg-bg p-1">
           <button id="jpgBgWhite" type="button" data-color="#ffffff" class="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:border-accent hover:text-ink">White</button>
           <button id="jpgBgBlack" type="button" data-color="#000000" class="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:border-accent hover:text-ink">Black</button>
-          <button id="jpgBgReset" type="button" class="rounded-lg border border-line px-3 py-2 text-sm text-muted hover:border-accent hover:text-ink">Reset</button>
         </div>
-        <p class="mt-1 text-sm text-muted">Used only when output format is JPEG.</p>
       </div>
     </fieldset>
 
@@ -378,7 +376,7 @@
       $('formatHint').textContent = 'Best for photos and most web images. Keeps transparency.';
       $('qualityHint').textContent = settings.quality >= 100 ? 'Lossless. Files will be large.' : '75 to 85 is a good range for photos.';
     } else if (settings.format === 'jpg') {
-      $('formatHint').textContent = 'Best for photos. Transparency is flattened onto white.';
+      $('formatHint').textContent = 'Best for photos. Transparency is flattened.';
       $('qualityHint').textContent = settings.quality >= 100 ? 'Highest quality JPEG. Files may still be larger than WebP.' : '70 to 85 is a good range for photos.';
     } else {
       $('formatHint').textContent = 'Best for logos, icons and screenshots. Photos stay large as PNG.';
@@ -406,11 +404,6 @@
   maxHEl.addEventListener('input', () => { settings.maxH = dim(maxHEl); settingsChanged(); });
   jpgBgEl.addEventListener('input', () => {
     settings.jpgBg = normalizeHexColor(jpgBgEl.value, settings.jpgBg);
-    jpgBgEl.value = settings.jpgBg;
-    settingsChanged();
-  });
-  $('jpgBgReset').addEventListener('click', () => {
-    settings.jpgBg = '#ffffff';
     jpgBgEl.value = settings.jpgBg;
     settingsChanged();
   });
