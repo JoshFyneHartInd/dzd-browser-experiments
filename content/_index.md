@@ -40,6 +40,12 @@ type = 'tool'
 description = 'Optimize images for the web and beyond'
 
 [[links]]
+title = 'PlateGhost'
+url = '/plateghost/'
+type = 'tool'
+description = 'Hide license plates in photos locally'
+
+[[links]]
 title = 'Visual Subnet Calculator'
 url = '/visual-subnet-calc/'
 type = 'tool'

@@ -1,0 +1,98 @@
+/* PlateGhost styles.
+   Layout and spacing utilities come from Tailwind (CDN) in index.html.
+   This file holds the theme tokens and the component classes that app.js also uses. */
+
+/* ---------- theme tokens ----------
+   Light by default. Dark when the system prefers it, unless the user forced light.
+   The user can force either theme with data-theme on <html> (see js/theme-init.js).
+   --box is also read by the canvas code in js/app.js. */
+:root {
+  --bg: #f4f3fb; --surface: #ffffff; --sunk: #e8e6f5; --ink: #17152b; --muted: #5f5c7a; --line: #d3d0e6;
+  --accent: #5b3df5; --accent-ink: #ffffff; --box: #d99a00;
+  --warn: #8a4f00; --warn-bg: #fbefd5; --bad: #b3261e;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --display: "Space Grotesk", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0d1a; --surface: #17152a; --sunk: #0a0913; --ink: #ebe9fa; --muted: #9a97b8; --line: #2d2a48;
+    --accent: #a78bfa; --accent-ink: #14102b; --box: #f2b705;
+    --warn: #f0b95a; --warn-bg: #2b2210; --bad: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e0d1a; --surface: #17152a; --sunk: #0a0913; --ink: #ebe9fa; --muted: #9a97b8; --line: #2d2a48;
+  --accent: #a78bfa; --accent-ink: #14102b; --box: #f2b705;
+  --warn: #f0b95a; --warn-bg: #2b2210; --bad: #ff8a80;
+  color-scheme: dark;
+}
+
+/* ---------- base ---------- */
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type=range] { width: 100%; min-width: 0; accent-color: var(--accent); }
+input[type=checkbox] { accent-color: var(--accent); }
+input[type=color] { width: 44px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: none; }
+/* .panel prefix beats Tailwind's reset (select { padding: 0 }), which the CDN injects after this file */
+.panel select { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; min-width: 0; max-width: 100%; }
+
+/* ---------- panels ---------- */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+
+/* ---------- photo list ---------- */
+.add { display: block; border: 1.5px dashed var(--line); border-radius: 6px; padding: 12px 10px; text-align: center; color: var(--muted); cursor: pointer; }
+.add:hover, .add.over, .drop:hover, .drop.over { border-color: var(--accent); }
+.add:hover, .add.over, .drop.over { color: var(--accent); }
+.add b { display: block; color: var(--ink); font-weight: 600; }
+.thumb { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg); }
+.thumb.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.tsel { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; padding: 4px; border: 0; background: none; text-align: left; }
+.tsel img { width: 44px; height: 44px; object-fit: cover; border-radius: 3px; flex: none; background: var(--sunk); }
+.tmeta { display: flex; flex-direction: column; min-width: 0; }
+.tname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.tstat { font: 11px var(--mono); color: var(--muted); }
+.tstat.zero, .tstat.err { color: var(--warn); }
+.tx { border: 0; background: none; color: var(--muted); padding: 0 8px; font-size: 18px; }
+.tx:hover { color: var(--bad); }
+@media (max-width: 980px) {
+  .thumb { flex: none; width: 190px; }
+}
+
+/* ---------- editor ---------- */
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 12px; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.note { font-size: 12.5px; color: var(--muted); }
+.note.warn { color: var(--warn); background: var(--warn-bg); border-radius: 6px; padding: 8px 10px; }
+.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; min-height: 340px; border: 1.5px dashed var(--line); border-radius: 6px; padding: 24px; cursor: pointer; color: var(--muted); }
+.drop h2 { margin: 0; font: 700 30px/1.2 var(--display); letter-spacing: -.025em; text-wrap: balance; color: var(--ink); }
+.drop p { margin: 0; max-width: 46ch; }
+#cv { max-width: 100%; max-height: 74vh; width: auto; height: auto; touch-action: none; display: block; cursor: crosshair; }
+
+/* ---------- controls ---------- */
+.grp { display: flex; flex-direction: column; gap: 8px; min-width: 0; border: 0; padding: 0; margin: 0; }
+.grp > legend, .lbl { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 0; }
+/* fieldset legends ignore flex gap, so give the legend its own space */
+.grp > legend { margin-bottom: 8px; }
+.row { display: flex; align-items: center; gap: 10px; justify-content: space-between; min-width: 0; }
+.row output { font: 12px var(--mono); color: var(--muted); min-width: 7ch; text-align: right; }
+.chk { display: flex; gap: 8px; align-items: flex-start; }
+.chk input { margin-top: 4px; }
+
+/* segmented radio control (cover method, theme) */
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg label { position: relative; text-align: center; padding: 6px 4px; cursor: pointer; border-left: 1px solid var(--line); }
+.seg label:first-child { border-left: 0; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--ink); color: var(--bg); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ---------- detector status ---------- */
+.model[data-s="ready"] .dot { background: var(--accent); }
+.model[data-s="error"] .dot { background: var(--bad); }
