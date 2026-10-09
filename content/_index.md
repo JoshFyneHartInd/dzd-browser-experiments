@@ -22,6 +22,12 @@ type = 'game'
 description = 'Monitor Diagnose Adjust Stabilize Repeat'
 
 [[links]]
+title = 'Cubemine'
+url = '/cubemine/'
+type = 'game'
+description = 'Volumetric Minesweeper'
+
+[[links]]
 title = 'Bleepr'
 url = '/bleepr/'
 type = 'tool'
@@ -68,12 +74,6 @@ title = 'Lexi-Check'
 url = '/lexi-check/'
 type = 'tool'
 description = 'Validate English words in real-time'
-
-[[links]]
-title = 'Cubemine'
-url = '/cubemine/'
-type = 'game'
-description = 'Volumetric Minesweeper'
 
 [[links]]
 title = 'Kaleidoscope'
