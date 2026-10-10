@@ -46,6 +46,12 @@ type = 'tool'
 description = 'Optimize images for the web and beyond'
 
 [[links]]
+title = 'AutoVeil'
+url = '/autoveil/'
+type = 'tool'
+description = 'Auto-detect and obscure faces in photos'
+
+[[links]]
 title = 'PlateGhost'
 url = '/plateghost/'
 type = 'tool'
