@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Rock Paper Scissors Royale</title>
+  <meta name="description" content="Beat the server's pick to survive. Last player standing wins.">
+  <meta name="theme-color" content="#f5f6f8">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="theme-init.js"></script>
+  <link rel="stylesheet" href="vendor/outfit/outfit.css">
+  <link rel="stylesheet" href="vendor/fa/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="lg:flex lg:h-dvh lg:flex-col">
+  <header class="sticky top-0 z-30 lg:shrink-0 border-b border-line bg-bg/80 backdrop-blur-sm" style="padding-top: env(safe-area-inset-top)">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4">
+      <a href="/" class="flex items-center gap-2.5 font-semibold tracking-tight" aria-label="Rock Paper Scissors Royale home" data-i18n-attr="aria-label:brand.home">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-brand-ink">
+          <svg class="h-5 w-5" aria-hidden="true"><use href="icons.svg#i-rock" width="100%" height="100%"></use></svg>
+        </span>
+        <span class="hidden sm:inline"><span data-i18n="brand.a">Rock Paper Scissors</span> <span class="text-accent" data-i18n="brand.b">Royale</span></span>
+        <span class="sm:hidden"><span data-i18n="brand.short">RPS</span> <span class="text-accent" data-i18n="brand.b">Royale</span></span>
+      </a>
+      <div id="chrome-actions" class="flex items-center gap-0.5"></div>
+    </div>
+    <div id="conn" class="hidden bg-warn/15 px-4 py-1.5 text-center text-sm text-warn" role="status"></div>
+  </header>
+
+  <div id="scroller" class="lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+    <main id="screen" class="mx-auto w-full max-w-6xl px-4 pb-24 pt-5 sm:pt-8 lg:pb-6" style="padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right))"></main>
+  </div>
+
+  <div id="toasts" class="pointer-events-none fixed inset-x-0 top-16 z-50 mx-auto flex w-[min(92vw,420px)] flex-col gap-2" aria-live="polite"></div>
+  <div id="modal-root"></div>
+
+  <script src="vendor/socket.io.min.js"></script>
+  <script src="i18n/en.js"></script>
+  <script src="i18n/es.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="config.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/lobbies.js"></script>
+  <script src="js/room.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
