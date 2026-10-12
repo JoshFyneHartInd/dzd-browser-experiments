@@ -6,7 +6,7 @@
   name: 'English',
   strings: {
     'meta.title': 'Rock Paper Scissors: Royale',
-    'meta.desc': 'Beat the server’s pick to survive. Last player standing wins.',
+    'meta.desc': 'Beat the server to survive. Last player standing wins.',
     'brand.a': 'Rock Paper Scissors:',
     'brand.b': 'Royale',
     'brand.short': 'RPS:',
@@ -43,13 +43,13 @@
 
     'help.aria': 'How to play',
     'help.title': 'How to play',
-    'help.s1': 'Each round, pick <b>rock, paper or scissors</b> before the timer runs out. The server picks at random after everyone has chosen.',
-    'help.s2': '<b>Beat the server</b> and you move on. <b>Lose</b> to it and you are out.',
+    'help.s1': 'Each round, pick <b>rock, paper or scissors</b> before the timer runs out and the server makes a choice.',
+    'help.s2': '<b>Beat the server</b> to move on. <b>Lose</b> and you are out.',
     'help.s3': '<b>Tie</b> and you get a strike. Three strikes and you are out.',
     'help.s4': 'Miss the timer and you are out. Eliminated players keep watching as spectators.',
     'help.s5': 'The last player standing wins. If nobody is left, the server wins.',
 
-    'start.tagline': 'Beat the server’s pick to survive each round. Last player standing wins.',
+    'start.tagline': 'Beat the server to survive each round. Last player standing wins.',
     'start.userLabel': 'Choose a username',
     'start.userPh': 'e.g. PaperTiger',
     'start.userHint': '3-16 letters, numbers or underscores.',
