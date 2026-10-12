@@ -57,6 +57,14 @@ function showReplaced() {
 }
 actions.reconnect = () => socket.connect();
 
+// Logo: go "home" inside the app. The href is this page's own address (never "/"), so it also
+// behaves if the app is opened in a new tab or served from a sub-path.
+$('#home-link').href = location.pathname + location.search;
+actions.home = (el, e) => {
+  e.preventDefault();
+  if (S.screen === 'create' || S.screen === 'browser') showBrowser();
+};
+
 // ---- socket events ----
 socket.on('connect', () => {
   S.online = true;
